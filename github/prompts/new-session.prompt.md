@@ -2,114 +2,242 @@
 # EXTERNAL_AGENT_PATH: ".github/prompts/new-session.prompt.md"
 name: new-session
 description: >
-  Arranca un chat nuevo reanudando el trabajo desde el snapshot operativo más reciente o desde el snapshot explícitamente indicado por `memory-compact`.
-  Punto de entrada obligatorio tras abrir una conversación nueva.
-  Si ni el snapshot ni el índice proporcionan información fiable, declara la inconsistencia y solicita confirmación al usuario; no procedan automáticamente hasta recibir respuesta.
+  Reanuda un chat nuevo desde un Prompt de Reanudación, snapshot operativo o
+  docs/sessions/INDEX.md. Valida coherencia, carga solo contexto mínimo y prepara
+  un handoff seguro a @QwikOrchestrator. Si la memoria es insuficiente o
+  contradictoria, detiene la reconstrucción automática y pide confirmación.
 tools: ["read"]
-argument-hint: "example: /new-session (sin argumento reanuda frente activo)"
+argument-hint: "example: /new-session"
 ---
 
-# 🔁 NEW SESSION
+# 🔁 NEW SESSION — REENTRY PROTOCOL
 
-**Objetivo:** Reanudar una feature o frente de trabajo en un chat nuevo cargando únicamente el artefacto principal y las dependencias explícitamente necesarias para el siguiente paso, validando la fuente contra `docs/sessions/INDEX.md` y dejando el sistema listo para handoff a `@QwikOrchestrator`.
+## Propósito
 
----
+`/new-session` reanuda trabajo en un chat nuevo sin depender de la conversación anterior.
 
-## Invocar a @QwikMemory
+No resume historial.
+No explora el repo a ciegas.
+No decide implementación.
+No sustituye a `@QwikOrchestrator`.
+No mezcla features por intuición.
 
-> "Ejecuta la operación New Session para reanudar trabajo en un chat nuevo.
->
-> **Tu tarea:**
->
-> 1. **Determina la fuente de reentrada** evaluando las condiciones de abajo en orden estricto — detente en la primera que se cumpla:
->
->    - **Condición A:** El usuario ha pegado o indicado un `Prompt de Reanudación` emitido por `/memory-compact` → usa el `Snapshot prioritario` indicado como referencia primaria.
->    - **Condición B:** No hay `Prompt de Reanudación` → lee `docs/sessions/INDEX.md` y busca una fila activa en **Frentes activos** → usa esa fila y localiza su último snapshot.
->    - **Condición C:** No hay frentes activos en el índice → busca entradas en "Sesiones / Snapshots" → usa el snapshot más reciente.
->    - **Condición D:** No hay snapshot explícito → usa la entrada activa o más reciente del índice como referencia mínima.
->    - **Condición E:** Ni snapshot ni índice ofrecen información fiable o son inconsistentes entre sí → declara la inconsistencia, detén la reconstrucción automática y solicita confirmación al usuario; no procedan hasta recibir respuesta.
->
-> 2. **Verifica la coherencia de la fuente elegida:**
->    - Si usas un snapshot, confírmalo contra la fila correspondiente en `docs/sessions/INDEX.md` sección **Frentes activos**;
->    - si feature, estado o routing del snapshot contradicen el índice, prioriza el snapshot emitido por `memory-compact` si es más reciente y verificable, y deja constancia de que `INDEX.md` requiere actualización.
->
-> 3. **Carga el contexto de reentrada** a partir de la fuente elegida. Carga únicamente:
->    - el artefacto principal (Spec o Plan activo de la feature);
->    - los artefactos que el snapshot o la fila del índice marquen explícitamente como necesarios para retomar;
->    - las dependencias explícitamente referenciadas como necesarias para el siguiente paso.
->    Excluye todo lo que no esté listado: specs o planes de otras features, sesiones archivadas, blueprints cerrados y auditorías no relacionadas.
->
-> 5. **Reconstruye el estado operativo** necesario para continuar — a partir de los artefactos cargados, no de la conversación anterior:
->    - qué se estaba haciendo;
->    - por qué;
->    - en qué fase quedó;
->    - qué decisiones siguen vigentes;
->    - qué bloqueo o riesgo sigue abierto;
->    - cuál es el siguiente paso exacto;
->    - qué agente debe tomar el relevo.
->    No reconstruyas toda la historia ni explores el repo a ciegas.
->    El objetivo es situar el sistema en el siguiente paso correcto.
->
-> 6. **Haz handoff a `@QwikOrchestrator`** con contexto mínimo y verificable,
->    incluyendo:
->    - fuente de reentrada usada (Frentes activos / Snapshot / Histórico);
->    - snapshot o fila de índice usada;
->    - artefactos cargados;
->    - siguiente paso exacto;
->    - agente recomendado por el snapshot o índice, si aplica;
->    - advertencias o prerequisitos abiertos.
->
-> **Regla de sistema:**
-> - `docs/sessions/INDEX.md` sección **Frentes activos** es la primera puerta de entrada cuando no hay snapshot explícito.
-> - El `Snapshot prioritario` emitido por `memory-compact` es la referencia primaria de reentrada cuando exista.
-> - `new-session` no sustituye al Orchestrator; prepara el contexto para su routing correcto."
+Su objetivo es reconstruir el mínimo contexto operativo necesario para continuar:
+
+```text
+Prompt de Reanudación / INDEX → Snapshot → Artefactos mínimos → Handoff a @QwikOrchestrator
+```
 
 ---
 
-## Criterios obligatorios
+## Regla operativa crítica
 
-- Leer `docs/sessions/INDEX.md` siempre como primera validación estructural.
-- Revisar sección **Frentes activos** antes de buscar en histórico.
-- No hacer exploración masiva del repositorio.
-- No cargar más contexto del necesario.
-- No reabrir decisiones ya fijadas en el snapshot sin motivo explícito.
-- No mezclar features activas por intuición.
-- Si falta snapshot útil, usar el índice para localizar el frente correcto sin inventar contexto.
-- Si no hay `INDEX.md`, derivar a `@QwikMemory` para inicialización de memoria colectiva.
+Antes de hacer handoff a `@QwikOrchestrator`, este prompt debe determinar con evidencia:
 
----
+1. qué feature o frente se retoma;
+2. qué fuente de reentrada se usó;
+3. qué snapshot o fila de INDEX gobierna la reentrada;
+4. qué artefactos mínimos deben cargarse;
+5. cuál es el siguiente paso exacto;
+6. qué agente debería actuar después del Orchestrator;
+7. qué riesgos o prerequisitos siguen abiertos.
 
-## Salida esperada
-
-Al terminar, `new-session` debe dejar preparado un handoff limpio hacia `@QwikOrchestrator` con esta información mínima:
-
-- Feature o frente retomado.
-- Fuente de reentrada usada (Frentes activos / Snapshot / Histórico).
-- Snapshot o fila de índice usada como base.
-- Entrada de `docs/sessions/INDEX.md` validada.
-- Artefactos efectivamente cargados.
-- Siguiente paso exacto.
-- Agente que debería actuar ahora.
-- Riesgos, bloqueos o prerequisitos abiertos.
+Si no puede determinar eso, detener.
 
 ---
 
-## Formato recomendado del handoff interno
+## Prohibiciones
+
+Durante `/new-session`, no hacer:
+
+- leer todo el repositorio;
+- listar todas las specs;
+- listar todos los plans;
+- cargar sesiones archivadas salvo snapshot explícito;
+- abrir blueprints cerrados sin necesidad;
+- cargar audits no relacionados;
+- inventar estado si INDEX y snapshot no coinciden;
+- asumir que la última conversación sigue vigente;
+- saltar directamente a Builder;
+- escribir código;
+- modificar artefactos.
+
+---
+
+## Paso 0 — Detectar entrada del usuario
+
+Evaluar si el usuario aportó un Prompt de Reanudación generado por `/memory-compact`.
+
+Buscar explícitamente estos campos:
+
+```text
+Reanudar feature:
+Snapshot prioritario:
+Verificar contra índice:
+Objetivo inmediato:
+Agente sugerido tras reentrada:
+```
+
+Si existen, usar esa fuente como primaria.
+
+Si no existen, usar `docs/sessions/INDEX.md` como fuente primaria.
+
+---
+
+## Paso 1 — Verificar INDEX
+
+`docs/sessions/INDEX.md` es la fuente de verdad colectiva.
+
+Debe leerse siempre como validación estructural, incluso si existe snapshot explícito.
+
+```text
+docs/sessions/INDEX.md
+```
+
+Si no existe:
+
+```text
+NEW-SESSION GATE BLOQUEADO: falta docs/sessions/INDEX.md.
+Siguiente paso: ejecutar /setup para inicializar memoria operativa.
+```
+
+No continuar con reconstrucción automática si falta INDEX, salvo que el usuario proporcione un snapshot completo y acepte continuar con memoria degradada.
+
+---
+
+## Paso 2 — Seleccionar fuente de reentrada
+
+Aplicar este orden estricto:
+
+| Prioridad | Condición | Fuente |
+|---|---|---|
+| 1 | El usuario pegó Prompt de Reanudación válido | `prompt-snapshot` |
+| 2 | INDEX contiene fila activa de la feature indicada | `index-active-entry` |
+| 3 | INDEX referencia snapshot reciente para una feature WIP/Blocked | `index-snapshot` |
+| 4 | INDEX contiene una única feature WIP | `index-single-wip` |
+| 5 | INDEX no contiene frente claro | `blocked-insufficient-memory` |
+
+### Regla
+
+Si hay más de una feature WIP y el usuario no indicó cuál retomar, detener:
+
+```text
+NEW-SESSION GATE BLOQUEADO: hay múltiples frentes activos y no se indicó cuál reanudar.
+Indica: /new-session para [feature-name] o pega el Prompt de Reanudación de /memory-compact.
+```
+
+---
+
+## Paso 3 — Validar snapshot prioritario
+
+Si existe `Snapshot prioritario`, verificar:
+
+- la ruta existe;
+- el snapshot corresponde a la feature indicada;
+- el snapshot contiene `Prompt de Reanudación` o contrato de reentrada equivalente;
+- el snapshot indica siguiente paso exacto;
+- el snapshot indica agente sugerido;
+- el INDEX contiene o puede reconocer esa feature.
+
+Si el snapshot no existe:
+
+```text
+NEW-SESSION GATE BLOQUEADO: el Snapshot prioritario indicado no existe.
+Revisa la ruta o ejecuta /setup para diagnosticar memoria.
+```
+
+Si snapshot e INDEX se contradicen:
+
+- si el snapshot es más reciente y completo, usarlo como fuente primaria;
+- marcar advertencia: `INDEX requiere actualización`;
+- no modificar INDEX desde `/new-session`;
+- delegar corrección a `@QwikMemory` tras handoff.
+
+---
+
+## Paso 4 — Carga mínima permitida
+
+Cargar solo:
+
+```text
+docs/sessions/INDEX.md
+docs/sessions/[snapshot-prioritario].md si existe
+docs/specs/[feature].md si snapshot/INDEX lo pide
+docs/plans/[feature].md si snapshot/INDEX lo pide
+docs/audits/[feature]-audit.md solo si la fase es Audit/Corrective Build
+docs/audits/[feature]-polish.md solo si la fase es Polish/Memory Close
+docs/bugs/[bug-id].md solo si la fase es Bug Diagnosis/Fix/Verification
+```
+
+Cargar otros artefactos solo si están citados explícitamente por snapshot o INDEX.
+
+### Regla
+
+El snapshot y el INDEX deciden qué cargar.
+El agente no debe buscar contexto por curiosidad.
+
+---
+
+## Paso 5 — Reconstruir estado operativo
+
+Reconstruir solo lo necesario para continuar.
+
+Debe quedar claro:
+
+- feature o frente retomado;
+- estado actual;
+- fase actual;
+- fuente de reentrada usada;
+- snapshot usado;
+- entrada de INDEX usada;
+- artefactos cargados;
+- decisiones vigentes;
+- riesgos o bloqueos abiertos;
+- siguiente paso exacto;
+- agente sugerido tras Orchestrator.
+
+Si cualquiera de estos campos queda desconocido, marcarlo como `UNKNOWN` y explicar qué artefacto falta.
+
+No inventar.
+
+---
+
+## Paso 6 — Resolver inconsistencias
+
+Aplicar estas reglas:
+
+| Caso | Acción |
+|---|---|
+| Snapshot más reciente que INDEX | Usar snapshot, advertir que INDEX requiere actualización |
+| INDEX más reciente que snapshot | Usar INDEX y marcar snapshot como potencialmente obsoleto |
+| Snapshot e INDEX apuntan a features distintas | Detener y pedir confirmación |
+| Snapshot no tiene siguiente paso | Usar INDEX si lo tiene; si no, detener |
+| INDEX vacío sin snapshot | Detener y recomendar `/setup` o `/memory-compact` previo |
+| Feature aparece Done pero snapshot dice WIP | Detener y pedir confirmación |
+
+---
+
+## Paso 7 — Preparar handoff a @QwikOrchestrator
+
+El handoff debe ser explícito y mínimo.
+
+Formato recomendado:
 
 ```json
 {
   "handoff_id": "[feature]-[timestamp]",
-  "resume_source": "prompt-snapshot | index-active-front | index-snapshot | index-entry",
-  "snapshot_used": "docs/sessions/[feature]-[timestamp].md",
-  "index_entry": "docs/sessions/INDEX.md#frentes-activos | docs/sessions/INDEX.md#[fila-o-feature]",
+  "resume_source": "prompt-snapshot | index-active-entry | index-snapshot | index-single-wip",
+  "feature": "[feature]",
+  "snapshot_used": "docs/sessions/[feature]-[timestamp].md | N/A",
+  "index_entry": "docs/sessions/INDEX.md#[feature]",
   "context_refs": [
     "docs/specs/[feature].md",
-    "docs/plans/[feature].md",
-    "docs/audits/[feature]-audit.md"
+    "docs/plans/[feature].md"
   ],
-  "next_step": "[acción concreta y acotada]",
+  "current_phase": "[fase]",
+  "next_step": "[acción concreta]",
   "routing_decision": "@QwikOrchestrator",
-  "suggested_next_agent": "@QwikBuilder | @QwikAuditor | @QwikArchitect | @QwikDBA | @QwikBugFix | @QwikPolisher | @QwikSpeccer",
+  "suggested_next_agent": "@QwikBuilder | @QwikAuditor | @QwikArchitect | @QwikDBA | @QwikBugFix | @QwikPolisher | @QwikSpeccer | @QwikMemory",
   "warnings": [
     "[bloqueos, conflictos o prerequisitos abiertos]"
   ]
@@ -118,16 +246,71 @@ Al terminar, `new-session` debe dejar preparado un handoff limpio hacia `@QwikOr
 
 ---
 
+## Paso 8 — Invocar a @QwikOrchestrator
+
+Mensaje de handoff:
+
+```text
+@QwikOrchestrator
+
+Reanudar trabajo desde /new-session.
+
+Fuente de reentrada: [resume_source]
+Feature/frente: [feature]
+Snapshot usado: [snapshot o N/A]
+INDEX validado: docs/sessions/INDEX.md
+Artefactos cargados: [lista mínima]
+Fase actual: [fase]
+Siguiente paso exacto: [acción]
+Agente sugerido tras routing: [agente]
+Advertencias: [warnings]
+
+Tarea:
+1. Validar el routing con la información mínima cargada.
+2. No explorar el repo masivamente.
+3. No reabrir decisiones vigentes salvo contradicción documentada.
+4. Enrutar al agente correcto.
+5. Si INDEX requiere actualización, activar @QwikMemory antes de continuar.
+```
+
+---
+
+## Salida esperada
+
+```text
+NEW SESSION READY
+
+Feature/frente: [feature]
+Fuente de reentrada: [prompt-snapshot / index-active-entry / index-snapshot / index-single-wip]
+Snapshot usado: [ruta o N/A]
+INDEX validado: sí / no
+Artefactos cargados: [lista]
+Fase actual: [fase]
+Siguiente paso exacto: [acción]
+Agente sugerido: [agente]
+Advertencias: [si aplica]
+Estado: READY FOR ORCHESTRATOR / BLOCKED
+```
+
+---
+
 ## Cuándo usar este prompt
 
-- Has abierto un chat nuevo tras ejecutar `/memory-compact`
-- Vas a retomar una feature y no quieres depender del historial anterior.
-- Existe snapshot de sesión y quieres reconstruir el contexto mínimo correcto.
-- El sistema debe volver al punto exacto donde quedó el trabajo, sin exploración masiva.
+- Al abrir un chat nuevo después de `/memory-compact`.
+- Cuando se quiere reanudar una feature sin depender del historial anterior.
+- Cuando existe snapshot de sesión y se quiere reconstruir contexto mínimo.
+- Cuando el sistema debe volver al punto exacto donde quedó el trabajo.
 
 ---
 
 ## Regla final
 
-`/new-session` no existe para contar qué pasó.  
-Existe para recuperar **el siguiente paso correcto** con el menor contexto posible, respetando el snapshot vigente, validando contra `docs/sessions/INDEX.md` sección **Frentes activos** como primera puerta de entrada, y entregando el routing a `@QwikOrchestrator`.
+`/new-session` no significa “cuéntame qué pasó”.
+
+`/new-session` significa:
+
+```text
+Recupera el siguiente paso correcto con el menor contexto posible y entrega el control al Orchestrator.
+```
+
+Si no puede hacerlo con evidencia, debe detenerse.
