@@ -1,0 +1,169 @@
+name: Build and Deploy — Doculink
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      # Inserción técnica para evitar el bug de undici/node20
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Setup Bun (runtime de producción)
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Create .env.local for build
+        run: |
+          echo "SUPABASE_URL=${{ secrets.SUPABASE_URL }}" >> .env.local
+          echo "SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" >> .env.local
+          echo "PUBLIC_SUPABASE_URL=${{ secrets.PUBLIC_SUPABASE_URL }}" >> .env.local
+          echo "PUBLIC_SUPABASE_ANON_KEY=${{ secrets.PUBLIC_SUPABASE_ANON_KEY }}" >> .env.local
+          echo "DATABASE_URL=${{ secrets.DATABASE_URL }}" >> .env.local
+          echo "GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}" >> .env.local
+          echo "GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}" >> .env.local
+          echo "RESEND_API_KEY=${{ secrets.RESEND_API_KEY }}" >> .env.local
+          echo "RESEND_FROM=${{ secrets.RESEND_FROM }}" >> .env.local
+          echo "STORAGE_BUCKET_DOCUMENTS=documents" >> .env.local
+          echo "STORAGE_BUCKET_SIGNATURES=signatures" >> .env.local
+          echo "CRON_SECRET=${{ secrets.CRON_SECRET }}" >> .env.local
+          echo "STRIPE_PUBLIC_KEY=${{ secrets.STRIPE_PUBLIC_KEY }}" >> .env.local
+          echo "STRIPE_SECRET_KEY=${{ secrets.STRIPE_SECRET_KEY }}" >> .env.local
+          echo "STRIPE_WEBHOOK_SECRET=${{ secrets.STRIPE_WEBHOOK_SECRET }}" >> .env.local
+          echo "PLAN_STARTER_PRICE_ID=${{ secrets.PLAN_STARTER_PRICE_ID }}" >> .env.local
+          echo "PLAN_PRO_PRICE_ID=${{ secrets.PLAN_PRO_PRICE_ID }}" >> .env.local
+          echo "PLAN_BIZ_PRICE_ID=${{ secrets.PLAN_BIZ_PRICE_ID }}" >> .env.local
+          echo "ENCRYPTION_KEY=${{ secrets.ENCRYPTION_KEY }}" >> .env.local
+          echo "NODE_ENV=production" >> .env.local
+          echo "PUBLIC_SITE_URL=${{ secrets.PUBLIC_SITE_URL }}" >> .env.local
+          echo "ORIGIN=${{ secrets.ORIGIN }}" >> .env.local
+
+      - name: Build app (cliente + servidor Bun)
+        run: bun run build
+
+      - name: Stop service and clean old build
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          password: ${{ secrets.VPS_SSH_PASSWORD }}
+          script: |
+            sudo systemctl stop doculink.service || true
+            rm -rf /home/ubuntu/doculink/server
+            rm -rf /home/ubuntu/doculink/dist
+            mkdir -p /home/ubuntu/doculink
+
+      - name: Upload package manifests
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          password: ${{ secrets.VPS_SSH_PASSWORD }}
+          source: "package.json,bun.lockb"
+          target: "/home/ubuntu/doculink"
+
+      - name: Upload server bundle (Bun)
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          password: ${{ secrets.VPS_SSH_PASSWORD }}
+          source: "server/"
+          target: "/home/ubuntu/doculink"
+
+      - name: Upload client assets
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          password: ${{ secrets.VPS_SSH_PASSWORD }}
+          source: "dist/"
+          target: "/home/ubuntu/doculink"
+
+      - name: Upload public assets
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          password: ${{ secrets.VPS_SSH_PASSWORD }}
+          source: "public/"
+          target: "/home/ubuntu/doculink"
+
+      - name: Configure .env and restart service
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          password: ${{ secrets.VPS_SSH_PASSWORD }}
+          script: |
+            cd /home/ubuntu/doculink
+
+            if ! command -v bun &> /dev/null; then
+              curl -fsSL https://bun.sh/install | bash
+              export BUN_INSTALL="$HOME/.bun"
+              export PATH="$BUN_INSTALL/bin:$PATH"
+            fi
+            BUN_BIN=$(command -v bun || echo "$HOME/.bun/bin/bun")
+            echo "Bun: $($BUN_BIN --version)"
+
+            cat > .env << 'ENVEOF'
+            SUPABASE_URL=${{ secrets.SUPABASE_URL }}
+            SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+            PUBLIC_SUPABASE_URL=${{ secrets.PUBLIC_SUPABASE_URL }}
+            PUBLIC_SUPABASE_ANON_KEY=${{ secrets.PUBLIC_SUPABASE_ANON_KEY }}
+            DATABASE_URL=${{ secrets.DATABASE_URL }}
+            GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
+            GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}
+            ANTHROPIC_API_KEY=${{ secrets.ANTHROPIC_API_KEY }}
+            RESEND_API_KEY=${{ secrets.RESEND_API_KEY }}
+            RESEND_FROM=${{ secrets.RESEND_FROM }}
+            STORAGE_BUCKET_DOCUMENTS=documents
+            STORAGE_BUCKET_SIGNATURES=signatures
+            CRON_SECRET=${{ secrets.CRON_SECRET }}
+            STRIPE_PUBLIC_KEY=${{ secrets.STRIPE_PUBLIC_KEY }}
+            STRIPE_SECRET_KEY=${{ secrets.STRIPE_SECRET_KEY }}
+            STRIPE_WEBHOOK_SECRET=${{ secrets.STRIPE_WEBHOOK_SECRET }}
+            PLAN_STARTER_PRICE_ID=${{ secrets.PLAN_STARTER_PRICE_ID }}
+            PLAN_PRO_PRICE_ID=${{ secrets.PLAN_PRO_PRICE_ID }}
+            PLAN_BIZ_PRICE_ID=${{ secrets.PLAN_BIZ_PRICE_ID }}
+            ENCRYPTION_KEY=${{ secrets.ENCRYPTION_KEY }}
+            PUBLIC_SITE_URL=${{ secrets.PUBLIC_SITE_URL }}
+            ORIGIN=${{ secrets.ORIGIN }}
+            NODE_ENV=production
+            PORT=3000
+            ENVEOF
+
+            chmod 600 .env
+
+            sudo tee /etc/systemd/system/doculink.service > /dev/null << SVCEOF
+            [Unit]
+            Description=Doculink App (Bun)
+            After=network.target
+
+            [Service]
+            Type=simple
+            User=ubuntu
+            WorkingDirectory=/home/ubuntu/doculink
+            ExecStart=$BUN_BIN /home/ubuntu/doculink/server/entry.bun.js
+            Restart=always
+            RestartSec=5
+            EnvironmentFile=/home/ubuntu/doculink/.env
+
+            [Install]
+            WantedBy=multi-user.target
+            SVCEOF
+                  sudo systemctl daemon-reload
+                  sudo systemctl restart doculink.service
+                  sleep 3
+                  sudo systemctl status doculink.service --no-pager
