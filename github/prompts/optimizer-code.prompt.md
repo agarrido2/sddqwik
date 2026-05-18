@@ -2,92 +2,393 @@
 # EXTERNAL_AGENT_PATH: ".github/prompts/optimizer-code.prompt.md"
 name: optimizer-code
 description: >
-  Auditoría y Refactorización Quirúrgica. Desmonta monolitos y aplica Clean
-  Code (DI, SoC, Portabilidad) en Qwik.
-tools: ["read", "edit", "upstash/context7/*"]
+  Ejecuta refactorización quirúrgica y optimización de código existente con scope
+  acotado. Detecta deuda técnica, separa responsabilidades, mejora Qwik
+  resumability, portabilidad, tests y calidad sin cambiar comportamiento
+  funcional. Si el cambio requerido altera contrato, datos, arquitectura o
+  comportamiento, detiene el flujo y redirige a Spec, Architect, DBA o BugFix.
+tools: ["read", "edit", "execute/runInTerminal", "upstash/context7/*"]
 argument-hint: "example: /optimizer-code src/features/auth/components/LoginForm.tsx"
 ---
 
-# 🔬 PROTOCOLO DE DESCOMPOSICIÓN ANTIMONOLITO — QWIK
+# 🔬 OPTIMIZER CODE PROTOCOL — `${input:filePath}`
 
-**Objetivo:** Erradicar el _bulky code_ del archivo `${input:filePath}`. No refinamos — **segmentamos y purificamos**.
+## Propósito
 
----
+`/optimizer-code` es una entrada de refactorización quirúrgica.
 
-## 🩻 Fase 1 — Auditoría de Deuda Técnica
+No crea features.
+No corrige bugs sin diagnóstico.
+No cambia comportamiento funcional.
+No rediseña arquitectura completa.
+No modifica schema ni RLS.
+No sustituye a Auditor ni Architect.
 
-Antes de generar código, detecta y reporta:
+Su objetivo es mejorar código existente manteniendo el contrato observable:
 
-1. **Fugas de Lógica (SoC):** ¿Hay lógica de negocio, validaciones o transformaciones de datos directamente implementadas dentro de componentes de UI?
-2. **Dependencias Rígidas (DI):** ¿Hay importaciones directas de Supabase/Drizzle dentro de un componente visual?
-3. **Hardcoded Junk:** ¿Hay arrays de datos, configuraciones JSON o estilos complejos definidos inline dentro del componente?
-4. **Violaciones de Prosa:** ¿Hay funciones de más de 10 líneas, nombres genéricos (`data`, `item`, `handle`) o anidamiento excesivo?
-5. **Fronteras `$()` rotas:** ¿Hay closures que capturan objetos no serializables (instancias de clase, Maps, Sets, Promesas)?
-6. **Estado sobredimensionado:** ¿El `useStore` o `useSignal` contiene datos que no son necesarios para reanudar la interactividad?
-
----
-
-## 🗺️ Fase 2 — Estrategia de Segmentación
-
-Diseña la nueva estructura bajo estos mandatos:
-
-- **Lógica Portátil:** Extrae TODO el estado y side-effects a un Custom Hook `use[DomainLogic]$`.
-- **Externalización de Datos:** Mueve arrays y configuraciones a `constants.ts` o un `.json` externo.
-- **Inyección de Dependencias:** El componente solo recibe piezas (`props` o `signals`), nunca sabe cómo se procesan los datos.
-- **Atomic Design:** Descompone bloques TSX repetitivos en micro-componentes `component$` locales o compartidos.
-- **Stores mínimos:** Redefine el estado para incluir SOLO lo necesario para reanudar la interactividad. Aplica `noSerialize()` agresivamente al resto.
-- **Co-localización de QRLs:** Agrupa los handlers `$()` que se invocan juntos en el mismo archivo/chunk.
+```text
+Scope acotado → Auditoría local → Plan de refactor → Cambio quirúrgico → Validación → Reporte
+```
 
 ---
 
-## ✍️ Fase 3 — Refactorización a Código Prosa
+## Regla operativa crítica
 
-Genera el nuevo código siguiendo estas leyes:
+Antes de editar, este prompt debe verificar:
 
-1. **Nombres Semánticos:** Si el nombre no describe el _qué_ y el _por qué_, cámbialo.
-2. **Single Purpose Functions:** Cada función hace UNA sola cosa. Si tiene un `if/else` complejo, divídela.
-3. **Pureza del Orquestador:** El archivo original en `src/routes/` debe quedar reducido a un índice visual: consume el hook, ensambla piezas, no declara lógica.
-4. **Resumabilidad QRL:** Asegura que cada `$()` es independiente y captura solo primitivos o IDs.
-5. **sync$():** Usa `sync$()` para todas las interacciones puras de DOM (toggle de modales, clases CSS).
+1. existe `${input:filePath}`;
+2. el scope es acotado;
+3. el objetivo es refactor/optimización, no cambio funcional;
+4. no se requieren cambios de datos, RLS o contrato público;
+5. no se requiere rediseño arquitectónico amplio;
+6. existen standards aplicables;
+7. se puede validar el resultado con tests, typecheck o build cuando aplique.
 
----
-
-## ✅ Fase 4 — Validación de Invariantes
-
-Cruza el resultado contra los siguientes grupos de validación en orden:
-
-**Grupo A — Resumabilidad Qwik:**
-- **Blacklist Absoluta:** Cero rastro de hooks de React o Next.js (ver `docs/standards/DECISIONS-QWIK.md` — hooks de React/Next.js).
-- **Snapshot Size:** ¿El estado serializado es mínimo? ¿Se aplica `noSerialize()` donde corresponde?
-- **Bundle Safety:** ¿Sin barrel exports (`export *`) en `src/features/`? ¿Sin librerías >10kB importadas completas? (ver `docs/standards/DECISIONS-QWIK.md` — bundle safety).
-
-**Grupo B — Contratos y Datos:**
-- **Contratos de Datos:** ¿Todos los retornos son interfaces puras/DTOs según `docs/standards/SERIALIZATION-CONTRACTS.md`?
-
-**Grupo C — Observabilidad y Calidad:**
-- **Observabilidad:** ¿Se usan prefijos `ORCH_`, `SERV_`, `DATA_` en las capturas de excepciones?
-- **Lessons Learned:** ¿Se ha consultado el bloque Top Lecciones de `docs/standards/LESSONS-LEARNED.md`?
-- **Tests:** ¿Los servicios refactorizados tienen sus tests en `src/tests/unit/`? (ver `docs/standards/TESTING-POLICY.md`)
+Si alguna condición falla, detener y enrutar al flujo correcto.
 
 ---
 
-## 📤 Salida Esperada
+## Prohibiciones
 
-1. **Reporte de Auditoría:** Qué principios se violaban y cómo se han resuelto.
-2. **Nuevos Artefactos:** Código para Custom Hooks, Services o Constants (archivos independientes).
-3. **Componente Refactorizado:** La versión delgada y orquestadora.
-4. **Sub-componentes Atómicos:** Desglose de piezas extraídas.
+Durante `/optimizer-code`, no hacer:
+
+- añadir funcionalidad nueva;
+- cambiar comportamiento visible sin Spec;
+- modificar schema, migraciones o RLS;
+- cambiar APIs públicas sin Plan;
+- tocar archivos fuera de scope sin justificarlo;
+- convertir un bug en refactor;
+- reescribir un módulo completo por preferencia estética;
+- crear abstracciones prematuras;
+- saltar tests relevantes;
+- ignorar Qwik resumability;
+- ocultar deuda estructural bajo cambios cosméticos.
 
 ---
 
-## Cuándo usar este prompt
+## Paso 0 — Validar entrada
 
-- Un archivo mezcla responsabilidades visibles (UI + lógica de negocio + datos)
-- El Auditor ha detectado violaciones de SoC o closures rotos
-- Quieres refactorizar código existente antes de añadir nueva lógica
-- Un componente no es portable sin arrastrar dependencias
+Usar `${input:filePath}` como ruta canónica del archivo o carpeta a optimizar.
+
+```bash
+TARGET_PATH="${input:filePath}"
+
+if [ -z "$TARGET_PATH" ]; then
+  echo "OPTIMIZER GATE BLOQUEADO: falta filePath."
+  echo "Usa: /optimizer-code [ruta]"
+  exit 1
+fi
+
+if [ ! -e "$TARGET_PATH" ]; then
+  echo "OPTIMIZER GATE BLOQUEADO: la ruta no existe: $TARGET_PATH"
+  exit 1
+fi
+
+echo "Scope objetivo: $TARGET_PATH"
+```
 
 ---
 
-> 💡 **Regla de oro:** Un componente que no puedes mover a otro proyecto sin
-> tocar nada más **no es portátil**. Si no es portátil, no está terminado.
+## Paso 1 — Clasificar tipo de trabajo
+
+Antes de editar, clasificar la solicitud:
+
+| Señal | Clasificación | Acción |
+|---|---|---|
+| archivo grande, lógica mezclada, nombres pobres, duplicación | refactor-local | continuar |
+| mejora de legibilidad sin cambio funcional | cleanup-local | continuar |
+| extraer constantes, hook, servicio o subcomponente | decomposition-local | continuar |
+| bug observado o regresión | bug | detener → `/bug-fix` |
+| cambio de comportamiento funcional | feature-change | detener → `/spec` o `/new-feature` |
+| cambio de schema, RLS, migraciones | data-change | detener → `@QwikDBA` |
+| cambio de arquitectura o fronteras de dominio | architecture-change | detener → `@QwikArchitect` |
+| código legacy no auditado | legacy-risk | detener → `/legacy-audit` |
+
+### Regla
+
+Solo continuar si la clasificación es:
+
+```text
+refactor-local
+cleanup-local
+decomposition-local
+```
+
+---
+
+## Paso 2 — Carga mínima permitida
+
+Cargar el scope objetivo y standards relevantes.
+
+### Cargar siempre
+
+```text
+${input:filePath}
+docs/standards/ARQUITECTURA-FOLDER.md
+docs/standards/PROJECT-RULES-CORE.md
+docs/standards/DECISIONS-QWIK.md
+docs/standards/SERIALIZATION-CONTRACTS.md
+docs/standards/QUALITY-STANDARDS.md
+docs/standards/TESTING-POLICY.md
+docs/standards/LESSONS-LEARNED.md
+```
+
+### Cargar si aplica
+
+```text
+docs/standards/DECISIONS-UI.md
+docs/standards/UX-GUIDE.md
+docs/standards/DECISIONS-DATA.md
+docs/standards/SECURITY-POLICIES.md
+docs/standards/RBAC-ROLES-PERMISSIONS.md
+docs/sessions/INDEX.md
+Spec/Plan relacionados solo si el archivo pertenece claramente a una feature activa
+```
+
+### Regla
+
+No cargar specs o plans de otras features.
+No abrir todo `src/`.
+No convertir el refactor en auditoría global.
+
+---
+
+## Paso 3 — Auditoría local antes de editar
+
+Emitir un diagnóstico breve antes de generar cambios.
+
+Verificar:
+
+1. Separación de responsabilidades.
+2. Lógica de negocio dentro de UI o routes.
+3. Dependencias directas no permitidas.
+4. Estado Qwik sobredimensionado.
+5. Fronteras `$()` y serialización.
+6. Imports pesados o barrel exports peligrosos.
+7. Funciones largas o anidamiento excesivo.
+8. Naming genérico.
+9. Duplicación local.
+10. Tests existentes o necesarios.
+
+Formato obligatorio:
+
+```text
+OPTIMIZER LOCAL AUDIT
+
+Scope: [ruta]
+Clasificación: refactor-local / cleanup-local / decomposition-local
+Riesgo: bajo / medio / alto
+Cambio funcional esperado: NO
+Archivos dentro de scope: [lista]
+Archivos fuera de scope requeridos: [lista o N/A]
+Bloqueos: [N/A o motivo de stop]
+```
+
+Si el riesgo es alto por arquitectura o dominio, detener y escalar a `@QwikArchitect`.
+
+---
+
+## Paso 4 — Plan de refactor quirúrgico
+
+Antes de editar, definir plan.
+
+```text
+OPTIMIZER PLAN
+
+Objetivo:
+- [qué se mejora]
+
+No cambiar:
+- comportamiento observable
+- contrato público
+- rutas
+- schema/RLS
+- permisos
+- copy funcional salvo limpieza menor
+
+Acciones:
+1. [acción concreta]
+2. [acción concreta]
+3. [acción concreta]
+
+Validación:
+- [test/typecheck/build/comprobación manual]
+```
+
+### Regla
+
+El plan debe ser pequeño.
+Si requiere más de 5-7 acciones relevantes o toca muchos dominios, no es optimizer-code: escalar a Architect o Spec.
+
+---
+
+## Paso 5 — Refactor permitido
+
+Aplicar solo cambios dentro del scope o directamente derivados del scope.
+
+Cambios permitidos:
+
+- extraer constantes;
+- extraer helpers puros;
+- extraer hook local si no cambia contrato;
+- extraer subcomponentes presentacionales;
+- mover lógica de UI a servicio/hook cuando el standard lo exige;
+- reducir estado serializado;
+- corregir closures `$()` inseguras;
+- mejorar nombres;
+- eliminar duplicación local;
+- añadir tests para servicios/utilidades afectadas;
+- mejorar manejo de errores sin cambiar flujo funcional.
+
+Cambios no permitidos sin redirección:
+
+- nuevas pantallas;
+- nuevos endpoints;
+- nuevos campos de DB;
+- nuevas policies;
+- nuevo comportamiento de negocio;
+- cambio de roles/permisos;
+- rediseño de dominio;
+- reescritura completa por preferencia;
+- cambios de UX significativos.
+
+---
+
+## Paso 6 — Validación obligatoria
+
+Ejecutar lo que aplique y exista en el repo.
+
+```bash
+bun test
+bunx tsc --noEmit
+bun run build
+```
+
+Si el repo tiene scripts específicos, usarlos según `package.json`.
+
+Si un comando no existe o no aplica, documentarlo.
+No inventar resultados.
+
+### Tests
+
+Si se crean o modifican servicios, helpers críticos o lógica reutilizable, aplicar `docs/standards/TESTING-POLICY.md`.
+
+Regla:
+
+```text
+Servicio nuevo o modificado → test obligatorio.
+Helper crítico nuevo o modificado → test recomendado/obligatorio según impacto.
+Componente puramente visual → test no obligatorio salvo lógica relevante.
+```
+
+---
+
+## Paso 7 — Reporte de cierre
+
+Al terminar, emitir:
+
+```text
+OPTIMIZER REPORT
+
+Scope: [ruta]
+Clasificación: refactor-local / cleanup-local / decomposition-local
+Archivos modificados:
+- [ruta]
+
+Cambios realizados:
+- [cambio]
+
+Comportamiento funcional:
+- Sin cambios / cambios detectados y bloqueados
+
+Tests/validación:
+- [comando] → [resultado]
+
+Riesgos residuales:
+- [N/A o riesgo]
+
+Siguiente paso recomendado:
+- [N/A / @QwikAuditor / /legacy-audit / @QwikArchitect / /bug-fix]
+```
+
+---
+
+## Paso 8 — Handoff a Auditor si aplica
+
+Activar `@QwikAuditor` si:
+
+- el refactor tocó lógica sensible;
+- se movió lógica entre capas;
+- se extrajeron servicios;
+- se tocaron fronteras `$()`;
+- había deuda crítica o mayor;
+- la validación dejó dudas;
+- el cambio afecta una feature en curso.
+
+Mensaje:
+
+```text
+@QwikAuditor
+
+Revisa el refactor realizado por /optimizer-code sobre `${input:filePath}`.
+
+Contexto:
+- Scope original: `${input:filePath}`
+- Reporte Optimizer: [resumen]
+- Archivos modificados: [lista]
+- Validación ejecutada: [tests/typecheck/build]
+
+Tarea:
+1. Verificar que no cambió comportamiento funcional.
+2. Verificar que se respetan ARQUITECTURA-FOLDER, DECISIONS-QWIK, SERIALIZATION-CONTRACTS y QUALITY-STANDARDS.
+3. Verificar tests según TESTING-POLICY.
+4. Emitir PASSED/FAILED con evidencia si el riesgo lo justifica.
+```
+
+---
+
+## Señales para Memory
+
+Activar `@QwikMemory` solo si:
+
+- se descubrió patrón reusable;
+- se corrigió deuda recurrente;
+- se tomó decisión estructural menor pero durable;
+- el refactor afecta una feature WIP o una zona legacy contenida;
+- debe actualizarse `LESSONS-LEARNED.md`.
+
+No guardar ruido de refactors triviales.
+
+---
+
+## Salida esperada
+
+```text
+OPTIMIZER RESULT — ${input:filePath}
+
+Scope validado: sí / no
+Clasificación: refactor-local / cleanup-local / decomposition-local / blocked
+Cambio funcional: no / sí-bloqueado
+Archivos modificados: N
+Tests/validación: passed / failed / not-run-with-reason
+Auditor requerido: sí / no
+Memory signal: sí / no
+Estado: COMPLETED / BLOCKED / NEEDS-AUDIT
+
+Siguiente paso:
+[una acción clara]
+```
+
+---
+
+## Regla final
+
+`/optimizer-code` no significa “mejora esto como quieras”.
+
+`/optimizer-code` significa:
+
+```text
+Haz una mejora interna acotada, sin cambiar el contrato funcional y con validación suficiente.
+```
+
+Si el cambio necesita alterar comportamiento, datos o arquitectura, no es optimizer-code.
