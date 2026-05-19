@@ -1,373 +1,265 @@
-# BLUEPRINT — Technical Architecture & Delivery Plan
+# Blueprint: [project]
 
-> **Proyecto:** [Nombre del proyecto]
-> **PRD de referencia:** `docs/prd/[proyecto]-prd.md`
-> **Fecha:** [fecha]
-> **Versión:** 1.0
-> **Estado:** 🟡 Draft | 🟠 Review | 🟢 Aprobado
+> Status: DRAFT | REVIEW | APPROVED | REJECTED
+> PRD: `docs/prd/[project]-prd.md`
+> Owner: @QwikBlueprint
+> Updated: [YYYY-MM-DD]
 
 ---
 
-## PARTE 0: CÓMO USAR ESTE DOCUMENTO
+## 0. How to use this document
 
-Este Blueprint traduce el PRD aprobado en un plano técnico ejecutable.
-Su propósito es responder tres preguntas antes de escribir una sola línea de código:
+This Blueprint converts a PRD Approved into a project execution map.
 
-1. **¿Qué módulos tiene la aplicación?** → Sección 1
-2. **¿En qué orden se construyen?** → Sección 2
-3. **¿Cómo se implementa cada módulo con SDD Qwik?** → Sección 3
+It answers:
 
-**Flujo de trabajo:**
 ```text
-PRD aprobado
-    ↓
-Blueprint (este documento) — aprobado por el equipo técnico
-    ↓
-Por cada módulo de cada fase:
-    /spec [módulo]         → @QwikSpeccer genera la Spec formal
-    /new-feature [módulo]  → Ciclo completo SDD Qwik
+What modules exist?
+In what order should they be specified?
+What dependencies and risks shape delivery?
+What is the first correct /spec?
 ```
 
-> **Regla:** No iniciar `/spec` sin Blueprint aprobado.
-> No iniciar `/new-feature` sin Spec aprobada.
-> El Blueprint define el orden. La Spec define el detalle.
+It does not implement.
+It does not create detailed Specs.
+It does not replace Architect.
+It does not design final schema/RLS.
 
----
-
-## PARTE 1: MAPA DE MÓDULOS
-
-> Descompón la aplicación en módulos independientes.
-> Cada módulo se convertirá en una o más Specs de SDD Qwik.
-> Un módulo = una unidad coherente de funcionalidad con límites claros.
-
-### 1.1 Módulos identificados
-
-| # | Módulo | Descripción | Tipo | Dependencias |
-|---|---|---|---|---|
-| M01 | [ej: Auth] | [ej: Registro, login, recuperación] | Core | — |
-| M02 | [ej: Catálogo] | [ej: Productos, categorías, búsqueda] | Core | M01 |
-| M03 | [ej: Carrito] | [ej: Añadir, modificar, vaciar] | Core | M01, M02 |
-| M04 | [ej: Checkout] | [ej: Pago, dirección, confirmación] | Core | M03 |
-| M05 | [ej: Dashboard Admin] | [ej: Gestión de productos y pedidos] | Admin | M01 |
-| M06 | [ej: Email transaccional] | [ej: Confirmación, envío, recuperación] | Infraestructura | M04 |
-
-**Tipos:**
-- **Core** — funcionalidad visible para el usuario final
-- **Admin** — panel de gestión interno
-- **Infraestructura** — servicios transversales (auth, email, pagos, notificaciones)
-- **Integraciones** — conexiones con servicios externos
-
-### 1.2 Mapa de dependencias
-
+Official flow:
 
 ```text
-[M01 Auth]
-    ↓
-[M02 Catálogo] ──→ [M05 Dashboard Admin]
-    ↓
-[M03 Carrito]
-    ↓
-[M04 Checkout] ──→ [M06 Email]
+PRD Approved
+  ↓
+/blueprint [project]
+  ↓
+Blueprint REVIEW
+  ↓
+Blueprint APPROVED by user
+  ↓
+/spec [first-spec]
+  ↓
+/new-feature [feature]
 ```
 
 ---
 
-## PARTE 2: FASES DE ENTREGA
+## 1. Project summary
 
-> Agrupa los módulos en fases. Cada fase debe ser entregable y demostrable por sí sola.
-> **Criterio de priorización:** valor para el usuario > dependencias técnicas > complejidad.
+### Objective
 
-### Fase 0 — Fundamentos (sin esta fase, nada funciona)
-**Objetivo:** Infraestructura técnica operativa.  
-**Entregable:** Proyecto desplegado, CI/CD configurado, auth funcionando.
+[What the project must achieve.]
 
-| Módulo | Descripción | Specs necesarias |
+### Product scope
+
+[Short scope summary from PRD.]
+
+### MVP definition
+
+[What must exist for the first usable release.]
+
+### Explicitly post-MVP
+
+[What is intentionally deferred.]
+
+---
+
+## 2. PRD validation
+
+| Item | Status | Notes |
 |---|---|---|
-| Setup del proyecto | Qwik + Supabase + Tailwind + Drizzle | — |
-| M01 Auth | Registro, login, sesión, rutas protegidas | `spec/auth-core` |
+| PRD exists | PASS/FAIL | |
+| PRD Approved | PASS/FAIL | |
+| Users/roles understandable | PASS/FAIL/N/A | |
+| Core flows understandable | PASS/FAIL | |
+| Data/security expectations understandable | PASS/FAIL/N/A | |
+| Critical decisions open | yes/no | |
 
-**Criterio de salida de la fase:** Usuario puede registrarse y acceder a su dashboard.
+### Assumptions
 
----
+-
 
-### Fase 1 — MVP (mínimo que tiene valor para el cliente)
-**Objetivo:** La funcionalidad core que justifica el producto.  
-**Entregable:** Versión usable por usuarios reales, aunque limitada.
+### Open decisions
 
-| Módulo | Descripción | Specs necesarias | Prioridad |
+| Decision | Why it matters | Owner | Required before |
 |---|---|---|---|
-| M02 Catálogo | Listado y detalle de productos | `spec/catalog-listing`, `spec/product-detail` | 🔴 Alta |
-| M05 Dashboard Admin | Alta y edición de productos | `spec/admin-products` | 🔴 Alta |
-
-**Criterio de salida de la fase:** Cliente puede publicar productos. Usuario puede verlos.
 
 ---
 
-### Fase 2 — Funcionalidad completa
-**Objetivo:** Producto completo según el PRD aprobado.  
-**Entregable:** Todo el alcance de Fase 1 del PRD.
+## 3. Users, roles and zones
 
-| Módulo | Descripción | Specs necesarias | Prioridad |
+| Actor/Role | Zone | Main goals | Permission notes |
 |---|---|---|---|
-| M03 Carrito | Gestión del carrito de compra | `spec/cart` | 🔴 Alta |
-| M04 Checkout | Proceso de pago completo | `spec/checkout-flow` | 🔴 Alta |
-| M06 Email | Confirmaciones y notificaciones | `spec/transactional-email` | 🟠 Media |
+| [role] | public/auth/private/admin/API | | |
 
-**Criterio de salida de la fase:** Usuario puede completar una compra de extremo a extremo.
+Application zones:
+
+```text
+public:
+auth:
+private/app:
+admin:
+API/webhooks:
+```
 
 ---
 
-### Fase 3 — Optimización y extras
-**Objetivo:** Mejoras post-lanzamiento basadas en feedback real.  
-**Entregable:** Features de Fase 2 del PRD (las que estaban OUT OF SCOPE).
+## 4. Module map
 
-| Módulo | Descripción | Specs necesarias | Prioridad |
+| Module | Slug | Type | Complexity | Phase | Dependencies | Notes |
+|---|---|---|---|---|---|---|
+| [Module] | [module-slug] | core/admin/auth/data/integration/ux/infra/reporting | simple/medium/complex | 0/1/2/3+/post-MVP | | |
+
+Module rules:
+
+```text
+A module is a coherent product capability.
+A module may become one or more Specs.
+Do not group half the product into one module.
+Do not create technical modules that the PRD does not justify.
+```
+
+---
+
+## 5. Delivery phases
+
+### Phase 0 — Foundations
+
+Goal:
+
+Modules:
+
+Exit criteria:
+
+### Phase 1 — MVP
+
+Goal:
+
+Modules:
+
+Exit criteria:
+
+### Phase 2 — Main expansion
+
+Goal:
+
+Modules:
+
+Exit criteria:
+
+### Phase 3+ — Later phases
+
+Goal:
+
+Modules:
+
+Exit criteria:
+
+### Post-MVP / Out of first delivery
+
+-
+
+---
+
+## 6. Dependency map
+
+```text
+[module-a]
+  ↓
+[module-b]
+```
+
+### Blocking dependencies
+
+| Dependency | Blocks | Reason | Resolution |
 |---|---|---|---|
-| [módulo] | [descripción] | [specs] | 💡 Baja |
+
+### Parallelizable work
+
+-
 
 ---
 
-## PARTE 3: DETALLE TÉCNICO POR MÓDULO
+## 7. Data and security map
 
-> Para cada módulo, define las decisiones técnicas antes de crear las Specs.
-> Este documento orienta a @QwikBlueprint y prepara el terreno para @QwikSpeccer y @QwikArchitect.
-> Debe ser coherente con `docs/standards/ARQUITECTURA-FOLDER.md`, `DECISIONS-DATA.md`,
-> `RBAC-ROLES-PERMISSIONS.md` y `CONTEXT7-GUIDE.md` cuando aplique.
+This section is conceptual. Final data design belongs to Architect/DBA during feature planning.
 
----
+| Area/Module | Probable entities | Ownership | Sensitive? | DBA likely? | Notes |
+|---|---|---|---|---|---|
+| [area] | [entity names] | user/org/workspace/tenant/system/public | yes/no/unknown | yes/no/unknown | |
 
-### M01 — Auth
-
-**Descripción:** Sistema de autenticación y gestión de sesión.
-
-**Stack:**
-- Supabase Auth (email/password + OAuth si aplica)
-- Guards y helpers en `src/lib/auth/`
-- Layout protegido en `src/routes/(app)/layout.tsx`
-- Contextos definidos en `src/lib/contexts/` si fueran necesarios
-
-**Rutas:**
-```text
-src/routes/
-├── (auth)/
-│   ├── layout.tsx
-│   ├── login/
-│   │   └── index.tsx
-│   ├── register/
-│   │   └── index.tsx
-│   ├── forgot-password/
-│   └── reset-password/
-└── (app)/
-    └── layout.tsx          ← Auth guard + App shell
-```
-
-**Schema DB:**
-```text
-schema-identity.ts
-  - organizations
-  - profiles
-  - invited / memberships / roles (si aplica)
-
-schema-domain.ts
-  - [normalmente vacío para auth pura]
-
-schema-relations.ts
-  - relaciones entre profiles, organizations y entidades de acceso
-
-schema.ts
-  - reexport unificado del schema completo
-```
-
-**Roles necesarios:** [listar roles del PRD — ver `RBAC-ROLES-PERMISSIONS.md`]
-
-**Specs a crear:**
-- [ ] `/spec auth-register` — Registro de usuario
-- [ ] `/spec auth-login` — Login y gestión de sesión
-- [ ] `/spec auth-password-reset` — Recuperación de contraseña
-
----
-
-### M02 — [Nombre del módulo]
-
-**Descripción:** [qué hace]
-
-**Stack / decisiones técnicas:**
-- [decisión 1]
-- [decisión 2]
-- [decisión ...]
-
-**Rutas:**
-```text
-src/routes/
-└── (app o public)/
-    └── [ruta]/
-        └── index.tsx
-```
-
-**Schema DB:**
-```text
-schema-identity.ts
-  - [tablas de identidad/tenant si aplica]
-
-schema-domain.ts
-  - [tablas del dominio]
-
-schema-relations.ts
-  - [relaciones transversales con otras entidades]
-
-schema.ts
-  - reexport unificado del schema completo
-```
-
-**Integraciones externas:** [si las hay — verificar IDs en `CONTEXT7-GUIDE.md`]
-
-**Specs a crear:**
-- [ ] `/spec [nombre-spec]` — [descripción]
-
----
-
-*(repetir para cada módulo)*
-
----
-
-## PARTE 4: DECISIONES ARQUITECTÓNICAS GLOBALES
-
-> Decisiones que afectan a toda la aplicación.
-> Una vez tomadas aquí, se reflejan en los ADRs de `docs/adr/`.
-
-### Base de datos
-- [ ] ¿Necesita multi-tenant (varias organizaciones)? → RLS por `organization_id`
-- [ ] ¿Hay datos de alto volumen que necesiten particionamiento?
-- [ ] ¿Necesita búsqueda full-text? → `pg_trgm` o `pgvector`
-- [ ] ¿Hay datos en tiempo real? → Supabase Realtime
-- [ ] ¿Se usará schema dividido? → `schema-domain.ts` + `schema-identity.ts` + `schema-relations.ts` + `schema.ts`
-
-### Autenticación
-- [ ] Solo email/password
-- [ ] OAuth (Google, GitHub, etc.)
-- [ ] Magic link
-- [ ] SSO empresarial
-
-### Pagos (si aplica)
-- [ ] Proveedor seleccionado: [Stripe / PayPal /LemonSqueezy / otro]
-- [ ] Modelo: pago único / suscripción / marketplace
-
-### Email (si aplica)
-- [ ] Proveedor: [Resend / SendGrid / otro]
-- [ ] Tipos: transaccional / marketing / ambos
-
-### Almacenamiento de ficheros (si aplica)
-- [ ] Supabase Storage
-- [ ] S3 / R2
-- [ ] Tipos de ficheros y tamaños máximos
-
-### Internacionalización
-- [ ] Solo un idioma
-- [ ] Multi-idioma — idiomas: [UK, ES, PT, FR, DE]
-
----
-
-## PARTE 5: ESTRUCTURA DE CARPETAS PREVISTA
-
-> Anticipa la estructura `src/` para este proyecto específico.
-> Debe respetar la arquitectura canónica definida en `docs/standards/ARQUITECTURA-FOLDER.md`.
-> `src/features/` solo se introduce si un dominio supera el umbral de complejidad definido por la arquitectura del proyecto.
-
+Rules:
 
 ```text
-public/
-├── favicon.svg
-├── manifest.json
-├── robots.txt
-
-src/
-├── assets/
-│   ├── css/
-│   │   ├── global.css
-│   │   └── fonts.css
-│   └── fonts/
-├── components/
-│   ├── icons/
-│   ├── ui/
-│   ├── shared/
-│   └── layout/
-├── hooks/
-├── lib/
-│   ├── auth/
-│   ├── contexts/
-│   ├── db/
-│   │   └── client.ts
-│   └── schemas/
-│       ├── schema-domain.ts
-│       ├── schema-identity.ts
-│       ├── schema-relations.ts
-│       └── schema.ts
-│   ├── services/
-│   ├── supabase/
-│   ├── types/
-│   └── utils/
-├── routes/
-│   ├── api/
-│   ├── (public)/
-│   ├── (auth)/
-│   ├── (app)/
-│   ├── layout.tsx
-│   └── service-worker.ts
-└── features/
-    ├── [solo si aplica por complejidad]
-    └── [modulo-complejo]/
+Do not define final schema here.
+Do not define RLS SQL here.
+Do not fix one universal schema path here.
+Mark modules that likely require DBA.
 ```
 
-### Regla estructural
-- `src/routes/` orquesta; no contiene lógica de negocio.
-- `src/components/` contiene UI reutilizable y composición visual.
-- `src/lib/` contiene lógica de negocio, auth, datos, validación e integraciones.
-- `src/features/` **no es obligatorio**; se usa solo para dominios complejos con múltiples archivos relacionados.
-- `src/lib/db/schema.ts` actúa como punto de entrada unificado del schema y reexporta los submódulos.
+---
 
-### Estructura de schema DB
-- `schema-domain.ts` → entidades del dominio de negocio (`contacts`, `categories`, etc.)
-- `schema-identity.ts` → identidad, tenant y acceso (`organizations`, `profiles`, `invited`, etc.)
-- `schema-relations.ts` → relaciones transversales entre entidades; importa de `schema-domain.ts` y `schema-identity.ts` y **no debe ser importado por ellos**
-- `schema.ts` → punto de entrada unificado; reexporta todos los módulos para mantener compatibilidad con imports existentes
+## 8. Integrations
+
+| Integration | Purpose | Status | Risk | Resolution point |
+|---|---|---|---|---|
+| [service/library] | | verified/pending/manual-check | | Spec/Plan/DBA |
+
+If an integration cannot be verified, do not mark it as a closed decision.
 
 ---
 
-## PARTE 6: CHECKLIST DE ARRANQUE
+## 9. Spec Queue
 
-> Completa esto antes de ejecutar el primer `/spec`.
+| Order | Spec slug | Module | Phase | Depends on | Why now | Notes |
+|---|---|---|---|---|---|---|
+| 1 | [first-spec] | [module] | 0/1 | | | |
 
-### Infraestructura
-- [ ] Repositorio creado y configurado
-- [ ] Proyecto Supabase creado (dev + prod)
-- [ ] Variables de entorno configuradas (`.env.local`)
-- [ ] Proyecto Qwik inicializado con el stack correcto
-- [ ] `/setup` ejecutado — workspace SDD Qwik verificado
+Rules:
 
-### Decisiones cerradas
-- [ ] Roles de usuario definidos (ver `RBAC-ROLES-PERMISSIONS.md`)
-- [ ] Schema DB inicial esbozado (Parte 3 de este Blueprint)
-- [ ] Estructura de schema validada (`schema-domain.ts`, `schema-identity.ts`, `schema-relations.ts`, `schema.ts`)
-- [ ] Integraciones externas identificadas (Parte 4)
-- [ ] Orden de fases aprobado por el cliente (Parte 2)
-
-### Documentación
-- [ ] PRD aprobado por el cliente
-- [ ] Blueprint aprobado por el equipo técnico
-- [ ] Primer ADR creado: decisión de stack/arquitectura global
+```text
+Every row should be executable as /spec [slug].
+First Spec must be small enough to specify clearly.
+Split large modules into multiple Specs.
+Mark dependencies explicitly.
+```
 
 ---
 
-## PARTE 7: HISTORIAL Y APROBACIONES
+## 10. First recommended Spec
 
-| Versión | Fecha | Autor | Cambio |
-|---|---|---|---|
-| 1.0 | [fecha] | [nombre] | Draft inicial |
+```text
+/spec [first-spec]
+```
 
-**Aprobado técnicamente:** [ ] Sí — Fecha: ___________
+Reason:
+
+Expected prerequisites:
 
 ---
 
-> **Siguiente paso tras la aprobación:**
-> Ejecutar `/setup` para verificar el workspace y comenzar con
-> `/spec [primer-módulo-de-fase-0]`.
+## 11. Risks and mitigations
+
+| Risk | Type | Impact | Mitigation | Owner |
+|---|---|---|---|---|
+| [risk] | product/technical/data/security/integration/scope | low/medium/high | | |
+
+---
+
+## 12. Approval
+
+- Status: REVIEW | APPROVED | REJECTED
+- Approved by:
+- Approval date:
+- Notes:
+
+---
+
+## 13. Next step after approval
+
+If approved:
+
+```text
+/spec [first-spec]
+```
+
+Do not start `/new-feature` until that Spec is Approved.
