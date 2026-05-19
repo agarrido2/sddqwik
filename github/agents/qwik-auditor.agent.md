@@ -1,5 +1,5 @@
 ---
-# EXTERNAL_AGENT_PATH: "./github-copilot/agents/qwik-auditor.agent.md"
+# EXTERNAL_AGENT_PATH: ".github/agents/qwik-auditor.agent.md"
 name: QwikAuditor
 description: >
   Auditor Técnico y de Cumplimiento del sistema SDD Qwik. Verifica una
