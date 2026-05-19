@@ -1,228 +1,366 @@
-# Núcleo de Reglas del Proyecto (V3.0 — SDD Edition)
+# Núcleo de Reglas del Proyecto — SDD Qwik
 
-> Stack: Qwik + Bun + Supabase + Drizzle ORM + Tailwind v4 + Context7 MCP
-> Paradigma: Spec-Driven Development (SDD)
-> Este archivo está por encima de cualquier prompt puntual.
+> Stack: Qwik + Qwik City + Bun + Supabase + Drizzle ORM + Tailwind v4 + Context7 MCP
+> Paradigma: Spec-Driven Development + workflow multi-agente
+> Versión: 2026.4
+
+Este archivo define reglas nucleares del proyecto.
+Está por encima de prompts puntuales cuando haya conflicto, salvo instrucciones explícitas del usuario que no rompan la seguridad ni los gates estructurales.
 
 ---
 
-## 1. Stack Oficial
+## 1. Stack oficial
 
-**Frontend:** Qwik + Qwik City (última versión estable)
-**Estilos:** Tailwind CSS v4 — configuración CSS-first en `src/assets/css/global.css`
-**Runtime:** Bun (dev/build/CI) · Node.js 20+ Alpine (producción)
-**Datos:** Supabase (PostgreSQL 15+) · Drizzle ORM · pgvector · pg_trgm
+**Frontend:** Qwik + Qwik City
+**Estilos:** Tailwind CSS v4, configuración CSS-first
+**Runtime:** Bun para desarrollo/build/CI · Node.js 20+ para producción
+**Datos:** Supabase/PostgreSQL · Drizzle ORM
 **IA:** Context7 MCP para documentación viva de librerías externas
 
 ---
 
-## 2. Paradigma de Desarrollo: SDD
+## 2. Rutas del sistema: distribución vs uso real
 
-**La Spec es la fuente de verdad única. Sin Spec aprobada, no se escribe código.**
+Este repositorio puede usar:
 
+```text
+github/
 ```
-/spec → Spec aprobada → /feature → Plan → Schema → Build → Audit → Polish → 🚀
+
+como carpeta de distribución para agentes, prompts e instrucciones.
+
+En un proyecto consumidor real, esa carpeta se instala o renombra como:
+
+```text
+.github/
 ```
 
-Ver `docs/standards/SDD-WORKFLOW.md` para el proceso completo.
+### Regla
+
+No tratar `github/` como ruta final permanente.
+
+```text
+github/   → modo distribución
+.github/  → modo instalado/operativo
+```
 
 ---
 
-## 3. Arquitectura Canónica (Vista Rápida)
+## 3. Paradigma de desarrollo: SDD
 
+Sin contrato aprobado, no se implementa.
+
+Flujo canónico:
+
+```text
+PRD Approved
+  ↓
+/blueprint [project]
+  ↓
+/spec [feature]
+  ↓
+/new-feature [feature]
+  ↓
+@QwikOrchestrator
+  ↓
+@QwikArchitect / @QwikDBA
+  ↓
+@QwikBuilder
+  ↓
+@QwikAuditor
+  ↓
+@QwikPolisher
+  ↓
+@QwikMemory
 ```
+
+Reglas duras:
+
+```text
+Sin Blueprint Approved en proyecto modular → no Specs de producción.
+Sin Spec Approved → no código de feature.
+Sin Plan aprobado/listo → Builder no implementa.
+Sin datos/RLS resueltos si aplican → Builder no implementa.
+Sin Delivery Summary verificable → Auditor no puede aprobar.
+Sin Audit PASSED → Polisher no actúa.
+Sin Memory/INDEX actualizado → cierre incompleto.
+```
+
+`/feature` es referencia obsoleta.
+El comando oficial es:
+
+```text
+/new-feature [feature]
+```
+
+---
+
+## 4. Arquitectura canónica
+
+La arquitectura detallada la gobierna:
+
+```text
+docs/standards/ARQUITECTURA-FOLDER.md
+```
+
+Vista rápida:
+
+```text
 src/
-├── routes/       → Orquestación ÚNICAMENTE (routeLoader$, routeAction$, layout)
-├── components/   → UI pura, agnóstica. Sin imports de DB ni servicios.
-│   ├── icons/    → Componentes SVG con PropsOf<'svg'>
-│   ├── layout/   → Shells y layouts globales
-│   └── ui/       → Botones, inputs, cards (design system)
-├── lib/          → El cerebro. Servicios, DB, auth, schemas, utils.
-│   ├── auth/     → Guards, middleware, permisos RBAC
-│   ├── db/       → client.ts, schema.ts, migraciones
-│   ├── services/ → Lógica de negocio reutilizable
-│   ├── supabase/ → server.ts (cliente SSR)
-│   └── utils/    → dark-mode.ts, validaciones, helpers
-└── features/     → Solo para features complejas (>5 archivos)
-    └── [feature]/ → components/, services/, types.ts, constants.ts
+├── routes/      → orquestación de rutas, loaders, actions y layouts
+├── components/  → UI reusable/presentacional
+├── lib/         → servicios, auth, datos, utilidades compartidas
+└── features/    → dominios de feature cuando la complejidad lo justifica
 ```
 
-**Reglas por dominio:**
-- `routes/`: Sin lógica de negocio. Sin acceso directo a DB.
-- `components/`: Sin imports de Drizzle, Supabase ni servicios de lib.
-- `lib/`: No importa desde `components/` ni `routes/`.
-- `features/`: Exponer facade en `src/lib/[feature]/index.ts`.
+### Reglas nucleares
+
+- `routes/` no concentra lógica de negocio reusable.
+- `components/` no conocen Drizzle, Supabase ni infraestructura sensible.
+- `lib/` es compartido real, no cajón de sastre.
+- `features/` se usa cuando hay dominio suficiente.
+- Las rutas exactas de datos/schema las definen `ARQUITECTURA-FOLDER`, `DECISIONS-DATA`, el Plan y DBA.
+
+No asumir una ruta única de schema desde este archivo.
 
 ---
 
-## 4. Runtime: Bun (Dev) + Node.js (Producción)
+## 5. Runtime y comandos
 
-**Comandos del ciclo de vida:**
+Usar Bun para instalación y ciclo de desarrollo:
+
 ```bash
-bun install          # Instalación (siempre bun, nunca npm/pnpm)
-bun dev              # Servidor de desarrollo (puerto 5173)
-bun run build        # Build de producción
-bun test             # Tests con Vitest
-bun run lint         # Linter
-bun run db:generate  # Generar migración Drizzle (ÚNICO comando DB permitido)
+bun install
+bun dev
+bun run build
+bun test
+bun run lint
+bun run db:generate
 ```
 
-> **🚫 PROHIBICIÓN PERMANENTE — `bun drizzle-kit push` / `bun run db:migrate`**
->
-> Estos comandos están **explícitamente prohibidos** en este proyecto.
-> `drizzle-kit push` compara el schema TypeScript con el estado real de la DB
-> y elimina todo lo que no reconoce, incluyendo las políticas RLS definidas
-> via SQL manual (migraciones 0013–0015+). Causa pérdida irreversible de
-> seguridad multi-tenant.
->
-> **Flujo canónico obligatorio para cambios de DB:**
-> 1. Editar `src/lib/db/schema-identity.ts` o `schema-domain.ts`
-> 2. `bun run db:generate` → Drizzle genera el SQL delta en `drizzle/`
-> 3. Revisar el SQL generado — añadir políticas RLS y GRANTs manualmente
-> 4. Aplicar el SQL en **Supabase Dashboard → SQL Editor**
-> 5. Verificar existencia de tablas/columnas en **Supabase Table Editor**
->
-> **Referencia:** LL-083 en `LESSONS-LEARNED.md`
+### Prohibiciones DB
 
-**Producción (Docker multi-stage):**
-- Stage 1 — Builder: `FROM oven/bun:1` → `bun run build`
-- Stage 2 — Runner: `FROM node:20-slim` → `node server/entry.node.js`
+No usar comandos destructivos o no aprobados que puedan desincronizar Drizzle, Supabase o RLS.
 
-**Adaptador requerido:** `adapter-node` (no `adapter-bun` en producción).
-**Prohibido en este proyecto:** `npm install`, `pnpm install`, `yarn`.
-El `bun.lockb` es binario — si hay conflicto de merge, borrar y regenerar con `bun install`.
+Si hay cambios de datos:
+
+```text
+@QwikDBA debe resolver schema/migraciones/queries/constraints/permisos/RLS.
+Builder no improvisa datos.
+```
+
+El flujo concreto de DB lo gobierna:
+
+```text
+docs/standards/DECISIONS-DATA.md
+```
 
 ---
 
-## 5. Sistema de Documentación
+## 6. Sistema documental
 
-```
+```text
 docs/
-├── prd/        → PRDs aprobados por el cliente (uno por proyecto)
-├── blueprint/  → Blueprints técnicos aprobados (uno por proyecto)
-├── templates/  → Plantillas PRD y Blueprint (no modificar)
-├── specs/      → Specs formales (fuente de verdad del QUÉ)
-├── plans/      → Plan Files (fuente de verdad del CÓMO)
-├── audits/     → Reportes de auditoría
-├── bugs/       → Trazabilidad de bugs
-├── sessions/   → Snapshots de contexto (@QwikMemory)
-├── adr/        → Architecture Decision Records
-└── standards/  → LA BIBLIA (este directorio)
+├── prd/        → PRDs aprobados por cliente/proyecto
+├── blueprint/  → Blueprints técnicos aprobados
+├── templates/  → Plantillas base
+├── specs/      → Specs formales: fuente del QUÉ
+├── plans/      → Plan Files: fuente del CÓMO
+├── audits/     → reportes de auditoría
+├── bugs/       → trazabilidad de bugs
+├── sessions/   → INDEX y snapshots de contexto
+├── adr/        → decisiones arquitectónicas permanentes
+└── standards/  → reglas del sistema
 
-.scratch/       → Temporal, gitignored
-scripts/db/     → SQL one-time, gitignored
+.scratch/       → temporal, no versionable
+scripts/db/     → SQL puntual o mantenimiento según política del proyecto
 ```
 
+### Regla de INDEX
+
+`docs/sessions/INDEX.md` debe ser versionable.
+Es la primera fuente de navegación operativa para Orchestrator, Memory y reentrada.
+
+Los snapshots pueden ser volátiles, pero el INDEX no debe perderse por un `.gitignore` demasiado amplio.
+
 ---
 
-## 6. Jerarquía de Agentes (V3.0)
+## 7. Jerarquía de agentes
 
+```text
+@QwikOrchestrator → router central, gates, handoffs, contexto mínimo
+@QwikBlueprint    → PRD → Blueprint
+@QwikSpeccer      → Feature → Spec verificable
+@QwikArchitect    → Spec → Plan técnico
+@QwikDBA          → datos, schema, queries, constraints, permisos, RLS
+@QwikBuilder      → Plan → código + Delivery Summary
+@QwikAuditor      → verificación con evidencia
+@QwikPolisher     → production readiness
+@QwikBugFix       → ciclo formal de bugs
+@QwikMemory       → INDEX, snapshots, Lessons, ADR, cierre
 ```
-@QwikOrchestrator → @QwikBlueprint (proyecto nuevo: PRD → Blueprint)
-                 → @QwikSpeccer → @QwikArchitect → @QwikDBA
-                                                 → @QwikBuilder → @QwikAuditor → @QwikPolisher
-                                                                ↕ (ciclo máx. 2)
-                    @QwikMemory (transversal)
+
+Cada agente respeta su dominio.
+Coordinar no significa invadir.
+
+---
+
+## 8. Resolución de conflictos
+
+Orden recomendado:
+
+1. Instrucción explícita del usuario, si no rompe gates/seguridad.
+2. `AGENTS.md`.
+3. `github/copilot-instructions.md` en modo distribución o `.github/copilot-instructions.md` en modo instalado.
+4. Standard aplicable al dominio.
+5. Artefacto aprobado más cercano: Blueprint, Spec, Plan, Audit, Bug report.
+6. Prompt actual.
+7. Contexto conversacional.
+
+Si una fuente antigua contradice el flujo reforzado, señalar obsolescencia y preferir el flujo actual.
+
+---
+
+## 9. Testing obligatorio
+
+Gobernado por:
+
+```text
+docs/standards/TESTING-POLICY.md
 ```
 
-Ver `AGENTS.md` para el manifest completo y los prompts disponibles.
+Reglas base:
+
+- servicio nuevo o modificado → test obligatorio;
+- helper crítico → test o justificación;
+- lógica de datos/permisos → test si es viable;
+- bugfix → test de regresión si es viable;
+- UI puramente presentacional → test no obligatorio salvo lógica relevante.
+
+No inventar resultados de tests.
+Si no se ejecutan, documentar motivo.
 
 ---
 
-## 7. Resolución de Conflictos entre Standards
+## 10. Anti-alucinación
 
-Si dos standards se contradicen, este es el orden de prioridad:
+Antes de usar librerías o APIs dudosas:
 
-1. `copilot-instructions.md` (La Constitución)
-2. `docs/standards/DECISIONS-DATA.md` (Para capa de datos)
-3. `docs/standards/ARQUITECTURA-FOLDER.md` (Para estructura)
-4. `docs/standards/PROJECT-RULES-CORE.md` (Este archivo)
-5. Resto de standards
-6. Instrucciones del prompt actual
-7. Instrucciones ad-hoc del usuario
-
-**Regla dura:** Si el usuario pide algo que viola los puntos 1-4, rechazar con explicación técnica.
-Un prompt puntual nunca supera una regla de la Constitución.
+- verificar standard interno aplicable;
+- usar Context7 si hay riesgo de versión, API o deprecación;
+- no inventar nombres de funciones, paquetes ni patrones;
+- no añadir dependencias si duplican funcionalidad existente.
 
 ---
 
-## 8. TDD — Qué Tiene Test Obligatorio
+## 11. Checklist de PR/feature
 
-**Test obligatorio:**
-- Lógica en `lib/services/`, `lib/auth/`, `lib/utils/`
-- Funciones que calculan, transforman o validan datos
-- Casos de borde críticos (errores, datos vacíos, autorizaciones)
+Una feature solo debería considerarse lista si:
 
-**Sin test (excepciones):**
-- Componentes UI puramente presentacionales
-- Wiring trivial de rutas que solo montan componentes
-- Estilos y clases Tailwind
-
----
-
-## 9. Reglas Anti-Alucinación
-
-**Librerías:** Antes de usar una librería nueva, verificar que:
-1. Existe en npm (no es un typo)
-2. Tiene actividad reciente
-3. No duplica funcionalidad ya presente en el proyecto
-4. Si hay duda sobre su API — usar Context7 (`CONTEXT7-GUIDE.md`)
-
-**Nunca inventar APIs de librerías.** Context7 existe para esto.
+- [ ] existe Spec Approved;
+- [ ] existe Plan aprobado/listo;
+- [ ] datos/RLS están resueltos si aplican;
+- [ ] Builder dejó Delivery Summary verificable;
+- [ ] tests obligatorios están presentes o justificados;
+- [ ] Audit report está `PASSED`;
+- [ ] Polisher emitió `PRODUCTION-READY`;
+- [ ] Memory actualizó INDEX/snapshot si aplica;
+- [ ] no hay desviaciones no aprobadas.
 
 ---
 
-## 10. El Checklist de un PR
+## 12. Control de versiones y `.gitignore`
 
-- [ ] Sigue la arquitectura (`docs/standards/ARQUITECTURA-FOLDER.md`)
-- [ ] Tiene Spec aprobada en `docs/specs/`
-- [ ] Plan File actualizado en `docs/plans/`
-- [ ] Audit report PASSED en `docs/audits/`
-- [ ] No añade dependencias sin verificar
-- [ ] Tests incluidos donde aplica
-- [ ] `@QwikPolisher` ha emitido `PRODUCTION-READY`
+### Debe versionarse
 
----
+```text
+docs/prd/
+docs/blueprint/
+docs/specs/
+docs/plans/
+docs/audits/
+docs/bugs/
+docs/adr/
+docs/standards/
+docs/sessions/INDEX.md
+```
 
-## 11. Control de Versiones — `.gitignore`
+### Puede ignorarse
 
-Estas rutas deben estar en `.gitignore`. El sistema SDD Qwik genera contenido
-temporal y volátil que no debe versionarse:
-
-```gitignore
-# SDD Qwik — no versionar
+```text
 .scratch/
-scripts/db/
-
-# Snapshots de sesión — volátiles, se regeneran con /memory-compact
-docs/sessions/
-
-# Variables de entorno
+scripts/db/ temporales si la política del proyecto lo define
+docs/sessions/archive/
+docs/sessions/*.tmp.md
+snapshots puramente locales o temporales
 .env
 .env.local
 .env.*.local
-
-# Build y dependencias
 dist/
 node_modules/
 .qwik/
-
-# Drizzle — el SQL generado sí se versiona, las migraciones aplicadas también
-# Solo excluir el studio temporal
 .drizzle/
 ```
 
-**Lo que SÍ debe versionarse:**
-- `docs/specs/` — contratos formales del sistema
-- `docs/plans/` — decisiones técnicas tomadas
-- `docs/audits/` — historial de calidad
-- `docs/bugs/` — trazabilidad de incidencias
-- `docs/adr/` — decisiones arquitectónicas permanentes
-- `docs/prd/` — requisitos aprobados por el cliente
-- `docs/blueprint/` — planos técnicos aprobados
-- `drizzle/` — migraciones SQL generadas
+### Regla crítica
 
-**Lo que NO debe versionarse:**
-- `docs/sessions/` — snapshots volátiles de contexto de sesión
-- `.scratch/` — notas y borradores temporales
-- `scripts/db/` — SQL one-time de mantenimiento ya ejecutado
+No añadir esta línea sin excepción:
+
+```gitignore
+docs/sessions/
+```
+
+porque ocultaría `docs/sessions/INDEX.md`, que es estructural para el sistema.
+
+---
+
+## 13. Flujos especiales
+
+### Bug
+
+```text
+/bug-fix [bug-id]
+```
+
+Requiere diagnóstico, causa raíz, clasificación y verificación.
+
+### Legacy
+
+```text
+/legacy-audit [path]
+```
+
+Veredicto antes de construir encima.
+
+### Refactor local
+
+```text
+/optimizer-code [path]
+```
+
+Sin cambio funcional encubierto.
+
+### Contexto
+
+```text
+/memory-compact
+/new-session
+```
+
+Compactar y reanudar sin reconstrucción masiva.
+
+---
+
+## 14. Regla final
+
+El sistema no existe para que la IA escriba código rápido.
+
+Existe para que la IA escriba código controlado:
+
+```text
+contrato claro
+plan claro
+build trazable
+audit verificable
+cierre con memoria útil
+```
