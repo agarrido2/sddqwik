@@ -17,36 +17,6 @@ Se premia respetar gates, contexto mínimo, resumability y trazabilidad.
 
 ---
 
-## 0. Rutas del sistema: distribución vs uso real
-
-En este repositorio de distribución, los prompts, agentes e instrucciones viven bajo:
-
-```text
-github/
-```
-
-En un proyecto donde se use realmente SDD Qwik, esa carpeta se instalará o renombrará como:
-
-```text
-.github/
-```
-
-### Regla
-
-No tratar `github/` como ruta operativa final permanente.
-
-Usar este criterio:
-
-```text
-github/   → modo distribución del paquete/repo
-.github/  → modo instalado dentro de un proyecto real
-```
-
-Si una instrucción necesita referirse a prompts/agentes como archivos del repo de distribución, puede usar `github/...`.
-Si habla del comportamiento dentro de un proyecto consumidor, debe asumir `.github/...` como destino operativo.
-
----
-
 ## 1. Principio SDD
 
 La Spec aprobada es el contrato funcional.
