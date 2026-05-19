@@ -2,10 +2,9 @@
 # EXTERNAL_AGENT_PATH: ".github/prompts/setup.prompt.md"
 name: setup
 description: >
-  Inicializa o verifica el workspace SDD Qwik. Detecta si el sistema está en
-  modo distribución o instalado, verifica agentes, prompts, standards,
-  templates, memoria operativa e índice del proyecto, y genera un health report
-  accionable sin exigir comandos adicionales al usuario.
+  Inicializa o verifica el workspace SDD Qwik. Comprueba estructura operativa,
+  agentes, prompts, standards, templates, memoria operativa e índice del proyecto,
+  y genera un health report accionable sin exigir comandos adicionales al usuario.
 tools: ["edit", "execute/runInTerminal", "read"]
 argument-hint: "example: /setup"
 ---
@@ -22,8 +21,8 @@ No debe convertirse en un barrido masivo del repositorio.
 
 Su responsabilidad es:
 
-1. detectar el modo del sistema;
-2. crear estructura mínima si falta;
+1. verificar estructura operativa mínima;
+2. crear estructura documental si falta;
 3. verificar que el sistema agéntico es operable;
 4. verificar standards y templates canónicos;
 5. asegurar memoria inicial;
@@ -57,92 +56,19 @@ Si el INDEX no existe, `/setup` debe crearlo.
 
 ---
 
-## Modo de distribución vs modo instalado
-
-SDD Qwik puede existir en dos modos válidos.
-
-### Modo distribución
-
-El repositorio fuente mantiene la carpeta:
-
-```text
-github/
-```
-
-Este modo es válido cuando el sistema se está distribuyendo, revisando o versionando como plantilla.
-
-### Modo instalado
-
-En un proyecto real, la carpeta debe estar instalada como:
-
-```text
-.github/
-```
-
-Este modo es el que espera GitHub Copilot en uso normal.
-
-### Regla
-
-Si existe `github/` y no existe `.github/`, no marcarlo como error crítico.
-
-Reportarlo como:
-
-```text
-Modo detectado: distribución
-Acción al instalar: renombrar github/ → .github/
-```
-
-Si existe `.github/`, reportar:
-
-```text
-Modo detectado: instalado
-```
-
-Si no existe ni `github/` ni `.github/`, reportar:
-
-```text
-Modo detectado: incompleto
-Estado: CONFIGURACIÓN NECESARIA
-```
-
----
-
-## Orden de ejecución
-
-Completa cada paso en orden.
-No saltes pasos.
-No inventes rutas.
-No sustituyas este flujo por exploración libre.
-
----
-
-## Paso 1 — Detectar modo del sistema
+## Paso 1 — Verificar estructura agéntica
 
 Ejecutar:
 
 ```bash
-echo "SDD QWIK SETUP — MODE DETECTION"
+echo "SDD QWIK SETUP — SYSTEM CHECK"
+
+SDD_GITHUB_DIR=".github"
 
 if [ -d ".github" ]; then
-  SDD_GITHUB_DIR=".github"
-  SDD_MODE="instalado"
-elif [ -d "github" ]; then
-  SDD_GITHUB_DIR="github"
-  SDD_MODE="distribución"
+  echo "Estructura agéntica: OK .github/"
 else
-  SDD_GITHUB_DIR=""
-  SDD_MODE="incompleto"
-fi
-
-echo "Modo detectado: ${SDD_MODE}"
-
-if [ "$SDD_MODE" = "distribución" ]; then
-  echo "Nota: este repositorio usa github/ como carpeta fuente."
-  echo "Al instalar en un proyecto real, renombrar github/ a .github/."
-fi
-
-if [ "$SDD_MODE" = "incompleto" ]; then
-  echo "FALTA: no existe github/ ni .github/"
+  echo "Estructura agéntica: FALTA .github/"
 fi
 ```
 
@@ -182,7 +108,7 @@ if [ ! -f ".gitignore" ]; then
 fi
 ```
 
-Verificar que contiene entradas mínimas.
+Verificar entradas mínimas.
 
 ```bash
 ensure_gitignore_entry() {
@@ -222,6 +148,12 @@ Si `.gitignore` contiene una línea exacta:
 
 ```gitignore
 docs/sessions
+```
+
+o:
+
+```gitignore
+docs/sessions/
 ```
 
 reportar advertencia:
@@ -301,8 +233,6 @@ echo "Directorios: ${dirs_ok}/${dirs_total}"
 
 ## Paso 6 — Verificar agentes canónicos
 
-Solo ejecutar si se detectó `github/` o `.github/`.
-
 ```bash
 echo ""
 echo "AGENTES SDD QWIK"
@@ -313,11 +243,11 @@ agents_total=0
 check_agent() {
   agents_total=$((agents_total + 1))
   file="${SDD_GITHUB_DIR}/agents/$1"
-  if [ -n "$SDD_GITHUB_DIR" ] && [ -f "$file" ]; then
+  if [ -f "$file" ]; then
     echo "OK     $file"
     agents_ok=$((agents_ok + 1))
   else
-    echo "FALTA  ${SDD_GITHUB_DIR:-[github|.github]}/agents/$1"
+    echo "FALTA  ${SDD_GITHUB_DIR}/agents/$1"
   fi
 }
 
@@ -349,11 +279,11 @@ prompts_total=0
 check_prompt() {
   prompts_total=$((prompts_total + 1))
   file="${SDD_GITHUB_DIR}/prompts/$1"
-  if [ -n "$SDD_GITHUB_DIR" ] && [ -f "$file" ]; then
+  if [ -f "$file" ]; then
     echo "OK     $file"
     prompts_ok=$((prompts_ok + 1))
   else
-    echo "FALTA  ${SDD_GITHUB_DIR:-[github|.github]}/prompts/$1"
+    echo "FALTA  ${SDD_GITHUB_DIR}/prompts/$1"
   fi
 }
 
@@ -520,15 +450,13 @@ echo "Riesgo estimado de contexto: ${context_risk}"
 
 ## Paso 13 — Determinar estado general
 
-Usar los contadores previos.
-
 ```bash
 echo ""
 echo "ESTADO GENERAL"
 
 status="LISTO"
 
-if [ "$SDD_MODE" = "incompleto" ]; then
+if [ ! -d ".github" ]; then
   status="CONFIGURACIÓN NECESARIA"
 fi
 
@@ -559,7 +487,7 @@ echo "SIGUIENTE PASO RECOMENDADO"
 
 if [ "$status" = "CONFIGURACIÓN NECESARIA" ]; then
   echo "- Completar instalación del sistema SDD Qwik."
-  echo "- Debe existir github/ en modo distribución o .github/ en modo instalado."
+  echo "- Debe existir .github/ con agents/, prompts/ y copilot-instructions.md."
 elif [ "$status" = "REQUIERE ATENCIÓN" ]; then
   echo "- Corregir los elementos marcados como FALTA antes de iniciar features nuevas."
 elif [ -f "docs/sessions/INDEX.md" ] && grep -qE '\|\s*(WIP|🚧 WIP|IN-PROGRESS|🟡 WIP)\s*\|' docs/sessions/INDEX.md; then
@@ -582,7 +510,7 @@ fi
 ```text
 SDD QWIK SETUP REPORT
 
-Modo detectado: distribución / instalado / incompleto
+Estructura agéntica: OK / FALTA
 Estructura base: N/N
 Agentes: N/10
 Prompts: N/9
@@ -609,7 +537,7 @@ Siguiente paso recomendado:
 
 El sistema tiene:
 
-- modo detectado válido;
+- `.github/` disponible;
 - estructura base presente;
 - agentes presentes;
 - prompts presentes;
@@ -627,7 +555,7 @@ No iniciar features nuevas hasta revisar los elementos marcados como `FALTA`.
 
 No existe estructura suficiente para operar SDD Qwik.
 
-Falta `github/` o `.github/`, o la base documental está incompleta.
+Falta `.github/` o la base documental está incompleta.
 
 ---
 
