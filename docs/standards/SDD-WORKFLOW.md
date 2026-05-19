@@ -17,71 +17,36 @@ Un agente con una Spec verificable produce código auditable para el problema co
 
 ---
 
-## 2. Rutas del sistema: distribución vs uso real
-
-En el repositorio de distribución, agentes, prompts e instrucciones pueden vivir bajo:
-
-```text
-github/
-```
-
-En un proyecto consumidor real, esa carpeta se instala o renombra como:
-
-```text
-.github/
-```
-
-### Regla
-
-`github/` no es la ruta operativa final permanente.
-
-Usar esta lectura:
-
-```text
-github/   → modo distribución
-.github/  → modo instalado/operativo
-```
-
----
-
-## 3. Sistema de memoria en 4 capas
+## 2. Sistema de memoria en 4 capas
 
 ```text
 L0 — Memoria procedimental
      .github/agents/*.agent.md
      .github/prompts/*.prompt.md
      .github/copilot-instructions.md
-     → Quién soy, qué puedo hacer, cómo tomo decisiones
 
 L1 — Memoria semántica
      docs/standards/*.md
-     → Qwik, arquitectura, datos, seguridad, UX, RBAC, testing
-     → Se lee bajo demanda, no completa por defecto
 
 L2 — Memoria episódica/documental
-     docs/prd/            → PRDs aprobados
-     docs/blueprint/      → Blueprints aprobados
-     docs/specs/          → Contratos funcionales
-     docs/plans/          → Planes técnicos y handoffs
-     docs/audits/         → Auditorías y veredictos
-     docs/bugs/           → Incidencias y causa raíz
-     docs/adr/            → Decisiones arquitectónicas
-     docs/sessions/       → INDEX y snapshots operativos
+     docs/prd/
+     docs/blueprint/
+     docs/specs/
+     docs/plans/
+     docs/audits/
+     docs/bugs/
+     docs/adr/
+     docs/sessions/
 
 L3 — Memoria de trabajo
      Ventana de contexto actual del modelo
-     → Volátil, limitada y cara
-     → Se compacta con /memory-compact
 ```
 
-### Regla de INDEX
-
-`docs/sessions/INDEX.md` es un artefacto estructural y debe poder versionarse.
-Los snapshots de sesión pueden ser volátiles, pero el INDEX es la primera fuente de navegación operativa.
+`docs/sessions/INDEX.md` es un artefacto estructural y debe poder versionarse. Los snapshots de sesión pueden ser volátiles, pero el INDEX es la primera fuente de navegación operativa.
 
 ---
 
-## 4. Ciclo completo SDD
+## 3. Ciclo completo SDD
 
 ```text
 PRD Approved
@@ -107,159 +72,77 @@ PRD Approved
 
 ---
 
-## 5. Fase -1 — Blueprint
+## 4. Blueprint
 
-**Entrada:** `/blueprint [project]`
-**Agente:** `@QwikBlueprint`
-**Input:** PRD aprobado en `docs/prd/[project]-prd.md`
+**Entrada:** `/blueprint [project]`  
+**Agente:** `@QwikBlueprint`  
+**Input:** PRD aprobado en `docs/prd/[project]-prd.md`  
 **Output:** `docs/blueprint/[project]-blueprint.md`
 
-El Blueprint traduce el PRD en un mapa de ejecución:
+El Blueprint traduce el PRD en módulos, fases, dependencias, zonas de aplicación, mapa preliminar de datos, riesgos, decisiones abiertas y orden recomendado de Specs.
 
-- módulos funcionales;
-- fases de entrega;
-- dependencias;
-- zonas pública/privada/admin/API;
-- mapa preliminar de datos;
-- riesgos y decisiones abiertas;
-- orden recomendado de Specs.
-
-### Gate
-
-Sin PRD Approved, no hay Blueprint formal.
-Sin Blueprint Approved, un proyecto modular grande no debería iniciar Specs de producción.
+**Gate:** sin PRD Approved no hay Blueprint formal. Sin Blueprint Approved, un proyecto modular grande no debería iniciar Specs de producción.
 
 ---
 
-## 6. Fase 0 — Spec
+## 5. Spec
 
-**Entrada:** `/spec [feature]`
-**Agente:** `@QwikSpeccer`
-**Input:** Blueprint/PRD/contexto funcional suficiente
+**Entrada:** `/spec [feature]`  
+**Agente:** `@QwikSpeccer`  
 **Output:** `docs/specs/[feature].md`
 
-La Spec define:
+La Spec define propósito, usuarios, Scope IN, Scope OUT, Acceptance Criteria funcionales y no funcionales, contratos de datos, estados, riesgos y criterios de auditoría.
 
-- propósito funcional;
-- usuarios/roles afectados;
-- Scope IN;
-- Scope OUT;
-- Acceptance Criteria funcionales binarios;
-- Acceptance Criteria no funcionales;
-- contratos de datos serializables;
-- datos/RLS/permisos si aplica;
-- estados loading/empty/error/unauthorized;
-- riesgos y supuestos;
-- criterios de auditoría.
-
-### Gate
-
-Sin Spec `Approved`, no se escribe código de feature.
-Sin AC verificables, la Spec sigue en Review.
+**Gate:** sin Spec `Approved`, no se escribe código de feature. Sin AC verificables, la Spec sigue en Review.
 
 ---
 
-## 7. Fase 1 — Entrada segura a feature
+## 6. Entrada segura a feature
 
-**Entrada:** `/new-feature [feature]`
-**Agente inicial:** prompt `/new-feature` + `@QwikOrchestrator`
-**Input:** Spec Approved
+**Entrada:** `/new-feature [feature]`  
+**Agente inicial:** prompt `/new-feature` + `@QwikOrchestrator`  
+**Input:** Spec Approved  
 **Output:** Plan File preparado o handoff a Architect
 
-`/new-feature` no implementa código y no crea Spec.
-Su función es abrir el ciclo de construcción de forma segura:
+`/new-feature` no implementa código y no crea Spec. Verifica Spec Approved, consulta INDEX, revisa dependencias, crea o preserva `docs/plans/[feature].md` y entrega a Orchestrator/Architect sin saltar directamente a Builder.
 
-- verificar Spec Approved;
-- consultar INDEX;
-- revisar dependencias;
-- crear o preservar `docs/plans/[feature].md`;
-- dejar Pre-flight Gate Report;
-- entregar a Orchestrator/Architect sin saltar directamente a Builder.
-
-### Gate
-
-Sin `/new-feature`, el sistema puede perder el rastro inicial del Plan.
-Sin Plan técnico aprobado/listo, Builder no implementa.
+**Gate:** sin Plan técnico aprobado/listo, Builder no implementa.
 
 ---
 
-## 8. Fase 2 — Plan técnico
+## 7. Plan técnico
 
-**Agente:** `@QwikArchitect`
-**Sub-agente si aplica:** `@QwikDBA`
-**Input:** Spec Approved
+**Agente:** `@QwikArchitect`  
+**Sub-agente si aplica:** `@QwikDBA`  
 **Output:** `docs/plans/[feature].md`
 
-Architect traduce el WHAT en HOW:
+Architect traduce el WHAT en HOW: archivos esperados, fronteras `$()`, rutas, capas, servicios, estado serializable, riesgos, tests y datos/RLS si aplica.
 
-- archivos esperados;
-- fronteras `$()`;
-- rutas y capas;
-- servicios/dominio;
-- estado serializable;
-- riesgos;
-- tests necesarios;
-- datos/RLS si aplica.
-
-DBA interviene cuando hay:
-
-- schema;
-- migraciones;
-- queries;
-- constraints;
-- permisos;
-- RLS;
-- integridad o seguridad de datos.
-
-### Gate
-
-Si Architect no puede planificar sin ambigüedad, la Spec está incompleta o el Blueprint necesita revisión.
-No se debe inventar lo que falta.
+DBA interviene cuando hay schema, migraciones, queries, constraints, permisos, RLS o integridad de datos.
 
 ---
 
-## 9. Fase 3 — Build
+## 8. Build
 
-**Agente:** `@QwikBuilder`
-**Input:** Spec Approved + Plan aprobado/listo + datos/RLS resueltos si aplican
+**Agente:** `@QwikBuilder`  
+**Input:** Spec Approved + Plan aprobado/listo + datos/RLS resueltos si aplican  
 **Output:** código + Delivery Summary verificable
 
-Builder implementa el Plan.
-No reinterpreta producto.
-No amplía scope.
-No inventa datos.
-No parchea bugs fuera de scope.
+Builder implementa el Plan. No reinterpreta producto, no amplía scope, no inventa datos y no parchea problemas fuera de scope.
 
-Su entrega debe incluir:
-
-- matriz AC → implementación → evidencia;
-- archivos modificados;
-- decisiones tomadas;
-- tests/validación ejecutados o justificación;
-- datos/RLS/seguridad si aplica;
-- desviaciones y riesgos.
+Su entrega debe incluir matriz AC → implementación → evidencia, archivos modificados, decisiones, validación, datos/RLS si aplica, desviaciones y riesgos.
 
 ---
 
-## 10. Fase 4 — Audit
+## 9. Audit
 
-**Agente:** `@QwikAuditor`
-**Input:** Spec + Plan + Delivery Summary + código
+**Agente:** `@QwikAuditor`  
+**Input:** Spec + Plan + Delivery Summary + código  
 **Output:** `docs/audits/[feature]-audit.md`
 
-Auditor verifica tres planos:
-
-1. cumplimiento funcional contra AC;
-2. cumplimiento técnico contra Plan;
-3. cumplimiento sistémico contra standards.
-
-### Gate
+Auditor verifica cumplimiento funcional contra AC, cumplimiento técnico contra Plan y cumplimiento sistémico contra standards.
 
 Sin matriz AC completa y evidencia verificable, no hay `PASSED`.
-Si hay issue crítico, no hay `PASSED`.
-Si hay issue mayor incompatible con producción, no hay `PASSED`.
-
-### Anti-loop
 
 ```text
 Audit FAILED ciclo 1 → Builder
@@ -269,108 +152,39 @@ Audit FAILED ciclo 3+ → Architect
 
 ---
 
-## 11. Fase 5 — Polish
+## 10. Polish
 
-**Agente:** `@QwikPolisher`
-**Input:** Audit PASSED
-**Output:** estado `PRODUCTION-READY` o bloqueo explícito
+**Agente:** `@QwikPolisher`  
+**Input:** Audit PASSED  
+**Output:** `PRODUCTION-READY` o bloqueo explícito
 
-Polisher no cambia funcionalidad.
-Su foco es production readiness:
-
-- build/typecheck/test si existen scripts;
-- performance;
-- UX final;
-- accesibilidad;
-- higiene técnica;
-- bundle sanity;
-- documentación mínima de cierre.
-
-### Gate
-
-Sin Audit PASSED, Polisher no actúa.
+Polisher no cambia funcionalidad. Su foco es build, typecheck/test si existen scripts, performance, UX, accesibilidad, higiene técnica y bundle sanity.
 
 ---
 
-## 12. Fase 6 — Memory
+## 11. Memory
 
 **Agente:** `@QwikMemory`
-**Input:** feature lista, snapshot requerido o señal reusable
-**Output:** INDEX/snapshot/Lessons/ADR según corresponda
 
-Memory no guarda ruido.
-Preserva continuidad operativa:
-
-- actualizar `docs/sessions/INDEX.md`;
-- crear snapshot si hace falta;
-- generar Prompt de Reanudación;
-- promover Lessons Learned si hay aprendizaje reusable;
-- proponer ADR si hay decisión estructural.
-
-### Gate
+Memory preserva continuidad operativa: actualiza `docs/sessions/INDEX.md`, crea snapshot si hace falta, genera Prompt de Reanudación, promueve Lessons Learned y propone ADR si hay decisión estructural.
 
 Una feature `PRODUCTION-READY` no está cerrada del todo hasta que Memory deja el estado navegable.
 
 ---
 
-## 13. Flujos especiales
-
-### Bugs
+## 12. Flujos especiales
 
 ```text
-/bug-fix [bug-id]
+/bug-fix [bug-id]       → incidencias con diagnóstico, causa raíz y verificación
+/legacy-audit [path]    → veredicto antes de construir encima de código heredado
+/optimizer-code [path]  → refactor local sin cambio funcional
+/memory-compact         → snapshot operativo y Prompt de Reanudación
+/new-session            → reentrada desde Prompt de Reanudación, snapshot o INDEX
 ```
-
-No se corrige un bug sin:
-
-- observed/expected;
-- reproducción o evidencia suficiente;
-- diagnóstico;
-- causa raíz o hipótesis explícita;
-- clasificación;
-- verificación.
-
-### Legacy
-
-```text
-/legacy-audit [path]
-```
-
-Veredictos:
-
-```text
-APTO
-CONDICIONADO
-REFACTOR TOTAL
-NO INCORPORAR
-```
-
-Sin veredicto, no se construye encima de legacy dudoso.
-
-### Optimizer
-
-```text
-/optimizer-code [path]
-```
-
-Solo permite refactor local sin cambio funcional.
-Si aparece bug, feature nueva, datos o arquitectura, redirigir al flujo correcto.
-
-### Contexto
-
-```text
-/memory-compact
-/new-session
-```
-
-`/memory-compact` guarda señal operativa.
-`/new-session` reanuda desde Prompt de Reanudación, snapshot o INDEX.
 
 ---
 
-## 14. Trazabilidad completa
-
-Cada feature debe poder reconstruirse desde artefactos:
+## 13. Trazabilidad completa
 
 ```text
 Qué quería el cliente      → docs/prd/[project]-prd.md
@@ -383,31 +197,24 @@ Por qué una decisión existe→ docs/adr/ADR-NNN-*.md
 Cómo se retoma             → docs/sessions/INDEX.md + snapshots
 ```
 
-Esto no es burocracia.
-Es el mecanismo que permite mantener un sistema generado con ayuda de IA sin perder control.
-
 ---
 
-## 15. Anti-patrones SDD
+## 14. Anti-patrones SDD
 
 | Anti-patrón | Síntoma | Consecuencia |
 |---|---|---|
-| Blueprint ausente | Specs sin orden ni dependencias | Retrabajo y features en orden incorrecto |
-| Spec vaga | “Hacer que funcione X” | Builder improvisa y Auditor no puede verificar |
+| Blueprint ausente | Specs sin orden ni dependencias | Retrabajo |
+| Spec vaga | “Hacer que funcione X” | Builder improvisa |
 | Spec post-hoc | Spec escrita después del código | AC descriptivos, no contractuales |
-| `/new-feature` omitido | Se salta pre-flight y Plan File | Pérdida de trazabilidad inicial |
-| Plan sin Spec | Architect inventa el WHAT | Código correcto para problema equivocado |
+| `/new-feature` omitido | Se salta pre-flight y Plan File | Pérdida de trazabilidad |
+| Plan sin Spec | Architect inventa el WHAT | Código para problema equivocado |
 | Builder sin Plan | Implementación por intuición | Deuda y scope creep |
-| Auditor sin AC | Solo revisa calidad técnica | Feature técnicamente buena pero funcionalmente mala |
-| Bug parcheado sin causa raíz | Fix rápido sin diagnóstico | Regresiones repetidas |
-| Legacy incorporado sin audit | Se adopta deuda invisible | Riesgo estructural y seguridad débil |
+| Auditor sin AC | Solo revisa calidad técnica | Cumplimiento funcional débil |
 | Memory no persistida | No se actualiza INDEX/snapshot | Pérdida de continuidad |
 
 ---
 
-## 16. Pregunta de oro
-
-Antes de iniciar cualquier tarea:
+## 15. Pregunta de oro
 
 ```text
 ¿Tengo el contrato correcto para esta acción?
@@ -422,5 +229,4 @@ Antes de iniciar cualquier tarea:
 - Contexto saturado → `/memory-compact`
 - Chat nuevo → `/new-session`
 
-Si no hay contrato, no se improvisa.
-Se crea o se recupera el contrato correcto.
+Si no hay contrato, no se improvisa. Se crea o se recupera el contrato correcto.
