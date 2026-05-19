@@ -11,42 +11,15 @@ Está por encima de prompts puntuales cuando haya conflicto, salvo instrucciones
 
 ## 1. Stack oficial
 
-**Frontend:** Qwik + Qwik City
-**Estilos:** Tailwind CSS v4, configuración CSS-first
-**Runtime:** Bun para desarrollo/build/CI · Node.js 20+ para producción
-**Datos:** Supabase/PostgreSQL · Drizzle ORM
+**Frontend:** Qwik + Qwik City  
+**Estilos:** Tailwind CSS v4, configuración CSS-first  
+**Runtime:** Bun para desarrollo/build/CI · Node.js 20+ para producción  
+**Datos:** Supabase/PostgreSQL · Drizzle ORM  
 **IA:** Context7 MCP para documentación viva de librerías externas
 
 ---
 
-## 2. Rutas del sistema: distribución vs uso real
-
-Este repositorio puede usar:
-
-```text
-github/
-```
-
-como carpeta de distribución para agentes, prompts e instrucciones.
-
-En un proyecto consumidor real, esa carpeta se instala o renombra como:
-
-```text
-.github/
-```
-
-### Regla
-
-No tratar `github/` como ruta final permanente.
-
-```text
-github/   → modo distribución
-.github/  → modo instalado/operativo
-```
-
----
-
-## 3. Paradigma de desarrollo: SDD
+## 2. Paradigma de desarrollo: SDD
 
 Sin contrato aprobado, no se implementa.
 
@@ -95,7 +68,7 @@ El comando oficial es:
 
 ---
 
-## 4. Arquitectura canónica
+## 3. Arquitectura canónica
 
 La arquitectura detallada la gobierna:
 
@@ -113,7 +86,7 @@ src/
 └── features/    → dominios de feature cuando la complejidad lo justifica
 ```
 
-### Reglas nucleares
+Reglas nucleares:
 
 - `routes/` no concentra lógica de negocio reusable.
 - `components/` no conocen Drizzle, Supabase ni infraestructura sensible.
@@ -125,7 +98,7 @@ No asumir una ruta única de schema desde este archivo.
 
 ---
 
-## 5. Runtime y comandos
+## 4. Runtime y comandos
 
 Usar Bun para instalación y ciclo de desarrollo:
 
@@ -157,7 +130,7 @@ docs/standards/DECISIONS-DATA.md
 
 ---
 
-## 6. Sistema documental
+## 5. Sistema documental
 
 ```text
 docs/
@@ -185,7 +158,7 @@ Los snapshots pueden ser volátiles, pero el INDEX no debe perderse por un `.git
 
 ---
 
-## 7. Jerarquía de agentes
+## 6. Jerarquía de agentes
 
 ```text
 @QwikOrchestrator → router central, gates, handoffs, contexto mínimo
@@ -205,13 +178,13 @@ Coordinar no significa invadir.
 
 ---
 
-## 8. Resolución de conflictos
+## 7. Resolución de conflictos
 
 Orden recomendado:
 
 1. Instrucción explícita del usuario, si no rompe gates/seguridad.
 2. `AGENTS.md`.
-3. `github/copilot-instructions.md` en modo distribución o `.github/copilot-instructions.md` en modo instalado.
+3. `.github/copilot-instructions.md`.
 4. Standard aplicable al dominio.
 5. Artefacto aprobado más cercano: Blueprint, Spec, Plan, Audit, Bug report.
 6. Prompt actual.
@@ -221,7 +194,7 @@ Si una fuente antigua contradice el flujo reforzado, señalar obsolescencia y pr
 
 ---
 
-## 9. Testing obligatorio
+## 8. Testing obligatorio
 
 Gobernado por:
 
@@ -242,7 +215,7 @@ Si no se ejecutan, documentar motivo.
 
 ---
 
-## 10. Anti-alucinación
+## 9. Anti-alucinación
 
 Antes de usar librerías o APIs dudosas:
 
@@ -253,7 +226,7 @@ Antes de usar librerías o APIs dudosas:
 
 ---
 
-## 11. Checklist de PR/feature
+## 10. Checklist de PR/feature
 
 Una feature solo debería considerarse lista si:
 
@@ -269,9 +242,9 @@ Una feature solo debería considerarse lista si:
 
 ---
 
-## 12. Control de versiones y `.gitignore`
+## 11. Control de versiones y `.gitignore`
 
-### Debe versionarse
+Debe versionarse:
 
 ```text
 docs/prd/
@@ -285,7 +258,7 @@ docs/standards/
 docs/sessions/INDEX.md
 ```
 
-### Puede ignorarse
+Puede ignorarse:
 
 ```text
 .scratch/
@@ -302,8 +275,6 @@ node_modules/
 .drizzle/
 ```
 
-### Regla crítica
-
 No añadir esta línea sin excepción:
 
 ```gitignore
@@ -314,44 +285,19 @@ porque ocultaría `docs/sessions/INDEX.md`, que es estructural para el sistema.
 
 ---
 
-## 13. Flujos especiales
-
-### Bug
+## 12. Flujos especiales
 
 ```text
-/bug-fix [bug-id]
+/bug-fix [bug-id]       → diagnóstico, causa raíz, clasificación y verificación
+/legacy-audit [path]    → veredicto antes de construir encima
+/optimizer-code [path]  → refactor local sin cambio funcional encubierto
+/memory-compact         → snapshot operativo y Prompt de Reanudación
+/new-session            → reentrada sin reconstrucción masiva
 ```
-
-Requiere diagnóstico, causa raíz, clasificación y verificación.
-
-### Legacy
-
-```text
-/legacy-audit [path]
-```
-
-Veredicto antes de construir encima.
-
-### Refactor local
-
-```text
-/optimizer-code [path]
-```
-
-Sin cambio funcional encubierto.
-
-### Contexto
-
-```text
-/memory-compact
-/new-session
-```
-
-Compactar y reanudar sin reconstrucción masiva.
 
 ---
 
-## 14. Regla final
+## 13. Regla final
 
 El sistema no existe para que la IA escriba código rápido.
 
