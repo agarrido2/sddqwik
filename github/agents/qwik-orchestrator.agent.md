@@ -1,5 +1,5 @@
 ---
-# EXTERNAL_AGENT_PATH: "./github-copilot/agents/qwik-orchestrator.agent.md"
+# EXTERNAL_AGENT_PATH: ".github/agents/qwik-orchestrator.agent.md"
 name: QwikOrchestrator
 description: >
   Router operativo central del sistema SDD Qwik. Analiza el estado real desde
