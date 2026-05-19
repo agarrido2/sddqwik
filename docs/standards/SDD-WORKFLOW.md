@@ -1,179 +1,232 @@
-# SDD WORKFLOW: Spec-Driven Development en SDD Qwik
+# SDD WORKFLOW — Spec-Driven Development en SDD Qwik
 
-> **Propósito:** Definir el proceso completo de Spec-Driven Development adoptado por el equipo
-> Este documento es el "por qué" detrás del sistema agéntico.
-> **Audiencia:** Desarrolladores, agentes IA y nuevos colaboradores.
+> **Propósito:** definir el proceso completo de Spec-Driven Development usado por SDD Qwik.
+> **Audiencia:** desarrolladores, agentes IA y nuevos colaboradores.
+> **Versión:** 2026.4
 
 ---
 
-## 🎯 La Tesis Central
+## 1. Tesis central
 
 > **La especificación es el código más importante que escribes.**
 
-En 2026, los agentes IA pueden generar código correcto rápidamente. El cuello de botella no es la velocidad de implementación — es la claridad de lo que se debe implementar.
+Los agentes IA pueden generar código rápido. El cuello de botella no es la velocidad de implementación, sino la claridad del contrato que gobierna esa implementación.
 
-Un agente IA con una Spec vaga producirá código correcto para el problema equivocado.
-Un agente IA con una Spec precisa producirá código correcto para el problema correcto.
+Un agente con una Spec vaga produce código aparentemente correcto para el problema equivocado.
+Un agente con una Spec verificable produce código auditable para el problema correcto.
 
 ---
 
-## 🏗️ El Sistema de Memoria en 4 Capas
+## 2. Sistema de memoria en 4 capas
 
-Los agentes del proyecto trabajan con 4 tipos de memoria, cada uno con una función distinta:
-
-```
-L0 — MEMORIA PROCEDIMENTAL (Cómo trabajar)
+```text
+L0 — Memoria procedimental
      .github/agents/*.agent.md
+     .github/prompts/*.prompt.md
      .github/copilot-instructions.md
-     → Quién soy, qué puedo hacer, cómo tomo decisiones
 
-L1 — MEMORIA SEMÁNTICA (Conocimiento del dominio)
+L1 — Memoria semántica
      docs/standards/*.md
-     → Qwik, Drizzle, Supabase, UX, RBAC...
-     → Se lee bajo demanda, no se carga todo siempre
 
-L2 — MEMORIA EPISÓDICA (Qué ha pasado)
-     docs/specs/          → Contratos de qué se debe construir
-     docs/plans/          → Cómo se decidió construirlo
-     docs/audits/         → Qué se verificó y con qué resultado
-     docs/bugs/           → Qué se rompió y cómo se reparó
-     docs/sessions/       → Snapshots para retomar trabajo
-     docs/adr/            → Por qué se tomaron decisiones clave
-     docs/prd/            → Requisitos del cliente (aprobados)
-     docs/blueprint/      → Plano técnico por proyecto
+L2 — Memoria episódica/documental
+     docs/prd/
+     docs/blueprint/
+     docs/specs/
+     docs/plans/
+     docs/audits/
+     docs/bugs/
+     docs/adr/
+     docs/sessions/
 
-L3 — MEMORIA DE TRABAJO (Contexto activo)
-     La ventana de contexto del modelo en la sesión actual
-     → Volátil, limitada, el recurso más valioso
-     → @QwikMemory la optimiza cuando se satura
+L3 — Memoria de trabajo
+     Ventana de contexto actual del modelo
 ```
 
-**Principio de diseño:** Los agentes siempre deben poder responder:
-"¿Por qué está esto así?" mirando L2. Nunca debe ser un misterio.
+`docs/sessions/INDEX.md` es un artefacto estructural y debe poder versionarse. Los snapshots de sesión pueden ser volátiles, pero el INDEX es la primera fuente de navegación operativa.
 
 ---
 
-## 🔄 El Ciclo Completo SDD
+## 3. Ciclo completo SDD
 
-### Fase -1: Blueprint (`/blueprint`)
-**Agente:** @QwikBlueprint
-**Input:** PRD aprobado por el cliente en `docs/prd/[proyecto]-prd.md`
-**Output:** `docs/blueprint/[proyecto]-blueprint.md` aprobado
-
-El Blueprint traduce el PRD en un plano técnico ejecutable antes de que
-cualquier Spec se escriba. Define los módulos, sus dependencias, las fases
-de entrega y las decisiones arquitectónicas globales.
-
-El agente toma las decisiones que puede inferir del PRD (estructura de rutas, orden de fases, lib/ vs features/) y pregunta al desarrollador solo lo que genuinamente necesita decidir (proveedor de pagos, auth,multi-idioma).
-
-**Gate:** Sin Blueprint aprobado → `/spec` no debería ejecutarse en proyectos nuevos.
-
----
-
-### Fase 0: Spec (`/spec`)
-**Agente:** @QwikSpeccer
-**Input:** Requisito humano (lenguaje natural)
-**Output:** `docs/specs/[feature].md` con estado 🟢 Approved
-
-El Speccer no adivina. Hace preguntas y define:
-- QUÉ problema resuelve (contexto)
-- PARA QUIÉN (usuarios afectados)
-- QUÉ se construye exactamente (scope IN)
-- QUÉ NO se construye (scope OUT)
-- CÓMO se verifica (Acceptance Criteria)
-- QUÉ datos maneja (contratos)
-
-**Gate:** Sin Spec Approved → `/feature` no puede ejecutarse.
+```text
+PRD Approved
+  ↓
+/blueprint [project]
+  ↓
+/spec [feature]
+  ↓
+/new-feature [feature]
+  ↓
+@QwikOrchestrator
+  ↓
+@QwikArchitect / @QwikDBA
+  ↓
+@QwikBuilder
+  ↓
+@QwikAuditor
+  ↓
+@QwikPolisher
+  ↓
+@QwikMemory
+```
 
 ---
 
-### Fase 1: Plan (`/feature` → @QwikArchitect)
-**Agente:** @QwikArchitect (+ @QwikDBA si hay cambios DB)
-**Input:** Spec aprobada
-**Output:** `docs/plans/[feature].md` completo
+## 4. Blueprint
 
-El Arquitecto traduce el WHAT en HOW:
-- Qué archivos crear/modificar
-- Qué fronteras `$()` diseñar
-- Qué estado serializar (mínimo)
-- Qué handlers co-localizar
+**Entrada:** `/blueprint [project]`  
+**Agente:** `@QwikBlueprint`  
+**Input:** PRD aprobado en `docs/prd/[project]-prd.md`  
+**Output:** `docs/blueprint/[project]-blueprint.md`
 
-**Principio:** Si el Arquitecto no puede planificar sin ambigüedad, la Spec está incompleta.
-Debe volver a @QwikSpeccer, no inventar lo que falta.
+El Blueprint traduce el PRD en módulos, fases, dependencias, zonas de aplicación, mapa preliminar de datos, riesgos, decisiones abiertas y orden recomendado de Specs.
+
+**Gate:** sin PRD Approved no hay Blueprint formal. Sin Blueprint Approved, un proyecto modular grande no debería iniciar Specs de producción.
 
 ---
 
-### Fase 2: Construcción (@QwikBuilder)
-**Input:** Plan aprobado + Schema migrado (si aplica)
-**Output:** Código en `src/`
+## 5. Spec
 
-El Builder implementa el Plan, no interpreta la Spec directamente.
-Si el Plan tiene un gap, escala a @QwikArchitect, no improvisa.
+**Entrada:** `/spec [feature]`  
+**Agente:** `@QwikSpeccer`  
+**Output:** `docs/specs/[feature].md`
+
+La Spec define propósito, usuarios, Scope IN, Scope OUT, Acceptance Criteria funcionales y no funcionales, contratos de datos, estados, riesgos y criterios de auditoría.
+
+**Gate:** sin Spec `Approved`, no se escribe código de feature. Sin AC verificables, la Spec sigue en Review.
 
 ---
 
-### Fase 3: Auditoría (@QwikAuditor)
-**Input:** Código + Spec (para AC) + Plan (para decisiones)
+## 6. Entrada segura a feature
+
+**Entrada:** `/new-feature [feature]`  
+**Agente inicial:** prompt `/new-feature` + `@QwikOrchestrator`  
+**Input:** Spec Approved  
+**Output:** Plan File preparado o handoff a Architect
+
+`/new-feature` no implementa código y no crea Spec. Verifica Spec Approved, consulta INDEX, revisa dependencias, crea o preserva `docs/plans/[feature].md` y entrega a Orchestrator/Architect sin saltar directamente a Builder.
+
+**Gate:** sin Plan técnico aprobado/listo, Builder no implementa.
+
+---
+
+## 7. Plan técnico
+
+**Agente:** `@QwikArchitect`  
+**Sub-agente si aplica:** `@QwikDBA`  
+**Output:** `docs/plans/[feature].md`
+
+Architect traduce el WHAT en HOW: archivos esperados, fronteras `$()`, rutas, capas, servicios, estado serializable, riesgos, tests y datos/RLS si aplica.
+
+DBA interviene cuando hay schema, migraciones, queries, constraints, permisos, RLS o integridad de datos.
+
+---
+
+## 8. Build
+
+**Agente:** `@QwikBuilder`  
+**Input:** Spec Approved + Plan aprobado/listo + datos/RLS resueltos si aplican  
+**Output:** código + Delivery Summary verificable
+
+Builder implementa el Plan. No reinterpreta producto, no amplía scope, no inventa datos y no parchea problemas fuera de scope.
+
+Su entrega debe incluir matriz AC → implementación → evidencia, archivos modificados, decisiones, validación, datos/RLS si aplica, desviaciones y riesgos.
+
+---
+
+## 9. Audit
+
+**Agente:** `@QwikAuditor`  
+**Input:** Spec + Plan + Delivery Summary + código  
 **Output:** `docs/audits/[feature]-audit.md`
 
-La auditoría tiene DOS dimensiones:
-1. **Spec Compliance:** ¿El código cumple los AC de la Spec?
-2. **Technical Quality:** ¿El código cumple los standards técnicos?
+Auditor verifica cumplimiento funcional contra AC, cumplimiento técnico contra Plan y cumplimiento sistémico contra standards.
 
-Ambas deben ser PASSED. Una sin la otra no es suficiente.
+Sin matriz AC completa y evidencia verificable, no hay `PASSED`.
 
-**Límite de ciclos:** 2 ciclos Builder↔Auditor máximo.
-Si en el ciclo 3 hay errores críticos: problema de diseño → @QwikArchitect.
-
----
-
-### Fase 4: Production (@QwikPolisher)
-**Input:** Audit PASSED + Plan File
-**Output:** Plan File cerrado con métricas + PRODUCTION-READY
-
-El Polisher no puede actuar sin Audit PASSED. Es la última línea de defensa
-antes de que el código llegue a producción.
-
----
-
-## 📊 Trazabilidad Completa
-
-Cada feature puede reconstruirse completamente desde los artefactos:
-
-```
-¿Qué quería el cliente?    → docs/prd/[proyecto]-prd.md
-¿Cómo se planificó?        → docs/blueprint/[proyecto]-blueprint.md
-¿Qué se construyó?         → docs/specs/[feature].md (los AC)
-¿Cómo se decidió?          → docs/plans/[feature].md (las decisiones)
-¿Por qué así?              → docs/adr/ADR-NNN-*.md (las razones)
-¿Pasó la calidad?          → docs/audits/[feature]-audit.md
-¿Cómo quedó en prod?       → docs/plans/[feature].md (Estado Final)
+```text
+Audit FAILED ciclo 1 → Builder
+Audit FAILED ciclo 2 → Builder si scope sigue acotado
+Audit FAILED ciclo 3+ → Architect
 ```
 
-Esto no es burocracia — es la diferencia entre un sistema mantenible en 6 meses
-y uno que nadie entiende por qué está como está.
+---
+
+## 10. Polish
+
+**Agente:** `@QwikPolisher`  
+**Input:** Audit PASSED  
+**Output:** `PRODUCTION-READY` o bloqueo explícito
+
+Polisher no cambia funcionalidad. Su foco es build, typecheck/test si existen scripts, performance, UX, accesibilidad, higiene técnica y bundle sanity.
 
 ---
 
-## 🚫 Anti-Patrones SDD
+## 11. Memory
+
+**Agente:** `@QwikMemory`
+
+Memory preserva continuidad operativa: actualiza `docs/sessions/INDEX.md`, crea snapshot si hace falta, genera Prompt de Reanudación, promueve Lessons Learned y propone ADR si hay decisión estructural.
+
+Una feature `PRODUCTION-READY` no está cerrada del todo hasta que Memory deja el estado navegable.
+
+---
+
+## 12. Flujos especiales
+
+```text
+/bug-fix [bug-id]       → incidencias con diagnóstico, causa raíz y verificación
+/legacy-audit [path]    → veredicto antes de construir encima de código heredado
+/optimizer-code [path]  → refactor local sin cambio funcional
+/memory-compact         → snapshot operativo y Prompt de Reanudación
+/new-session            → reentrada desde Prompt de Reanudación, snapshot o INDEX
+```
+
+---
+
+## 13. Trazabilidad completa
+
+```text
+Qué quería el cliente      → docs/prd/[project]-prd.md
+Cómo se ordenó el proyecto → docs/blueprint/[project]-blueprint.md
+Qué se aprobó construir    → docs/specs/[feature].md
+Cómo se decidió construir  → docs/plans/[feature].md
+Qué se implementó          → Delivery Summary del Plan
+Qué se verificó            → docs/audits/[feature]-audit.md
+Por qué una decisión existe→ docs/adr/ADR-NNN-*.md
+Cómo se retoma             → docs/sessions/INDEX.md + snapshots
+```
+
+---
+
+## 14. Anti-patrones SDD
 
 | Anti-patrón | Síntoma | Consecuencia |
 |---|---|---|
-| Blueprint ausente | Specs sin orden ni dependencias claras | Features construidas en el orden equivocado, retrabajos |
-| Spec Vaga | "Hacer que funcione el login" | El Builder improvisa, el Auditor no puede verificar |
-| Spec Post-hoc | Escribir la Spec después del código | Pierde el propósito; los AC son descripción, no contrato |
-| Plan sin Spec | @QwikArchitect inventa el WHAT | Código correcto para el problema equivocado |
-| Auditor sin AC | Solo verifica calidad técnica | Feature técnicamente correcta pero funcionalmente incorrecta |
-| Memoria no persistida | No usar @QwikMemory | Decisiones perdidas, ciclos repetidos, deuda de contexto |
+| Blueprint ausente | Specs sin orden ni dependencias | Retrabajo |
+| Spec vaga | “Hacer que funcione X” | Builder improvisa |
+| Spec post-hoc | Spec escrita después del código | AC descriptivos, no contractuales |
+| `/new-feature` omitido | Se salta pre-flight y Plan File | Pérdida de trazabilidad |
+| Plan sin Spec | Architect inventa el WHAT | Código para problema equivocado |
+| Builder sin Plan | Implementación por intuición | Deuda y scope creep |
+| Auditor sin AC | Solo revisa calidad técnica | Cumplimiento funcional débil |
+| Memory no persistida | No se actualiza INDEX/snapshot | Pérdida de continuidad |
 
 ---
 
-## ✅ La Pregunta de Oro
+## 15. Pregunta de oro
 
-Antes de empezar cualquier tarea, pregúntate:
+```text
+¿Tengo el contrato correcto para esta acción?
+```
 
-> "¿Tengo una Spec aprobada que define exactamente qué debo verificar
-> cuando termine?"
+- Proyecto nuevo → PRD Approved + `/blueprint`
+- Feature nueva → `/spec` Approved + `/new-feature`
+- Implementación → Plan aprobado/listo
+- Bug → `/bug-fix`
+- Legacy → `/legacy-audit`
+- Refactor local → `/optimizer-code`
+- Contexto saturado → `/memory-compact`
+- Chat nuevo → `/new-session`
 
-Si la respuesta es No → `/spec` primero.
-Si la respuesta es Sí → continúa con confianza.
+Si no hay contrato, no se improvisa. Se crea o se recupera el contrato correcto.
