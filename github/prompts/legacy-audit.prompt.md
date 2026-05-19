@@ -2,163 +2,452 @@
 # EXTERNAL_AGENT_PATH: ".github/prompts/legacy-audit.prompt.md"
 name: legacy-audit
 description: >
-  Auditoría completa de código heredado. Analiza, clasifica deuda técnica y
-  genera un plan de saneamiento priorizado antes de construir sobre él.
+  Audita código heredado o no confiable antes de incorporarlo al flujo SDD.
+  Verifica alcance, riesgos, arquitectura, seguridad, tests, datos y compatibilidad
+  Qwik; emite un veredicto operativo y define si el código puede usarse, requiere
+  saneamiento acotado o necesita rediseño. No permite construir sobre legacy sin
+  auditoría trazable.
 tools: ["read", "edit", "execute/runInTerminal", "upstash/context7/*"]
 argument-hint: "example: /legacy-audit src/features/auth"
 ---
 
-# 🏚️ LEGACY AUDIT PROTOCOL: `${input:legacyPath}`
+# 🏚️ LEGACY AUDIT PROTOCOL — `${input:legacyPath}`
 
-> **Prerequisito:** Si `${input:legacyPath}` no se proporciona, no existe en el workspace o no es accesible, responde con:
-> `"La ruta '${input:legacyPath}' no es válida o no se puede acceder. Verifica la ruta e inténtalo de nuevo."` y detén la operación.
+## Propósito
 
-**Objetivo:** Auditar el código heredado en `${input:legacyPath}`, clasificar toda la deuda técnica encontrada y generar un plan de saneamiento priorizado antes de construir nada nuevo sobre él.
+`/legacy-audit` es la puerta de entrada para código heredado, generado fuera del flujo SDD, dudoso, importado o no confiable.
 
-> ⚠️ **Regla de oro:** No se construye sobre código sin un reporte de auditoría completo y aprobado. Este prompt
-> es el prerequisito obligatorio para cualquier `/feature` que toque código
-> existente.
+No reescribe código.
+No sanea automáticamente.
+No convierte legacy en feature nueva.
+No sustituye a `/bug-fix`.
+No permite construir encima sin veredicto.
 
-**Flujo obligatorio:**
+Su objetivo es producir una decisión trazable:
 
+```text
+Legacy detectado → Alcance acotado → Auditoría → Veredicto → Plan de saneamiento o adopción → Entrada segura al flujo SDD
 ```
-/legacy-audit → @QwikAuditor (análisis) → docs/audits/legacy-[path]-audit.md → Plan de saneamiento → ✅
-```
-
-> Este prompt enruta directamente a `@QwikAuditor` como excepción declarada
-> al flujo de entrada único del Orchestrator.
 
 ---
 
-## Paso 1: Crear el Artefacto de Auditoría
+## Regla operativa crítica
+
+Antes de permitir que una feature, bugfix o refactor se apoye en código heredado, debe existir:
+
+1. ruta válida;
+2. artefacto `docs/audits/legacy-[slug]-audit.md`;
+3. scope auditado;
+4. riesgos clasificados;
+5. veredicto final;
+6. acción siguiente clara;
+7. si procede, plan de saneamiento o rediseño.
+
+Si no hay veredicto, no se construye encima.
+
+---
+
+## Prohibiciones
+
+Durante `/legacy-audit`, no hacer:
+
+- modificar código heredado;
+- aplicar fixes;
+- reestructurar carpetas;
+- crear nuevas features;
+- aprobar el legacy por intuición;
+- auditar todo el repo si se pidió una ruta concreta;
+- leer artefactos no relacionados;
+- ocultar deuda crítica como deuda menor;
+- emitir veredicto sin evidencia;
+- saltar a Builder sin plan de saneamiento.
+
+---
+
+## Paso 0 — Validar entrada
+
+Usar `${input:legacyPath}` como ruta auditada.
+
+Si no se proporciona, detener:
+
+```text
+LEGACY-AUDIT GATE BLOQUEADO: falta una ruta legacyPath.
+Usa: /legacy-audit [ruta]
+```
+
+Verificar que la ruta existe y es accesible:
 
 ```bash
-mkdir -p docs/audits
+LEGACY_PATH="${input:legacyPath}"
+
+if [ -z "$LEGACY_PATH" ]; then
+  echo "LEGACY-AUDIT GATE BLOQUEADO: legacyPath vacío."
+  exit 1
+fi
+
+if [ ! -e "$LEGACY_PATH" ]; then
+  echo "LEGACY-AUDIT GATE BLOQUEADO: la ruta no existe o no es accesible: $LEGACY_PATH"
+  exit 1
+fi
+
+echo "Ruta legacy válida: $LEGACY_PATH"
 ```
 
-Crea el archivo `docs/audits/legacy-${input:legacyPath}-audit.md`:
-```md
-# Legacy Audit: ${input:legacyPath}
+---
+
+## Paso 1 — Normalizar slug de auditoría
+
+Crear un slug seguro para el nombre del reporte.
+
+```bash
+LEGACY_SLUG=$(echo "$LEGACY_PATH" | sed 's#[/.]#-#g' | sed 's/[^a-zA-Z0-9_-]/-/g' | sed 's/--*/-/g' | sed 's/^-//' | sed 's/-$//')
+AUDIT_FILE="docs/audits/legacy-${LEGACY_SLUG}-audit.md"
+mkdir -p docs/audits
+
+echo "Audit file: $AUDIT_FILE"
+```
+
+---
+
+## Paso 2 — Crear o preservar artefacto de auditoría
+
+Si no existe, crear reporte inicial.
+
+```bash
+if [ ! -f "$AUDIT_FILE" ]; then
+  cat > "$AUDIT_FILE" <<EOF
+# Legacy Audit: ${LEGACY_PATH}
 
 > Estado: 🔴 Auditando
-> Created: [YYYY-MM-DD]
-> Last Updated: [YYYY-MM-DD]
+> Created: $(date +%F)
+> Last Updated: $(date +%F)
+> Ruta auditada: ${LEGACY_PATH}
+> Agente auditor: @QwikAuditor
 
-## 📁 Scope Auditado
+## 1. Scope auditado
 
-- **Ruta:** ${input:legacyPath}
-- **Archivos analizados:** [listar]
-- **Agentes originales:** [si se conocen]
+- Ruta: ${LEGACY_PATH}
+- Tipo: [archivo / carpeta / módulo / feature / desconocido]
+- Archivos revisados: pendiente
+- Artefactos SDD relacionados: pendiente
+- Feature relacionada: pendiente
 
-## 🔴 Deuda Crítica (Bloquea construcción)
+## 2. Contexto y origen
 
-[Violaciones que impiden añadir código nuevo de forma segura]
+- Origen del código: [legacy manual / generado por IA / importado / desconocido]
+- Nació dentro de SDD: [sí / no / desconocido]
+- Último cambio conocido: [N/A]
+- Riesgo inicial: [bajo / medio / alto / crítico]
 
-## 🟠 Deuda Mayor (Debe resolverse pronto)
+## 3. Hallazgos críticos 🔴
 
-[Violaciones importantes que generan riesgo técnico acumulado]
+Pendiente.
 
-## 🟡 Deuda Menor (Mejora recomendada)
+## 4. Hallazgos mayores 🟠
 
-[Mejoras de calidad, nomenclatura, organización]
+Pendiente.
 
-## ✅ Lo que está bien
+## 5. Hallazgos menores 🟡
 
-[Patrones correctos que deben preservarse]
+Pendiente.
 
-## 🗺️ Plan de Saneamiento
+## 6. Patrones correctos a preservar ✅
 
-| Prioridad | Archivo | Problema | Acción | Agente |
-|-----------|---------|----------|--------|--------|
+Pendiente.
 
-## 📋 Veredicto Final
+## 7. Riesgos por dominio
 
-> [ ] 🟢 APTO — Se puede construir sobre este código tras fixes menores
-> [ ] 🟠 CONDICIONADO — Requiere saneamiento previo antes de nueva feature
-> [ ] 🔴 REFACTOR TOTAL — Rediseño con @QwikArchitect obligatorio
+| Dominio | Estado | Evidencia | Impacto |
+|---|---|---|---|
+| Arquitectura | Pendiente |  |  |
+| Qwik/Resumability | Pendiente |  |  |
+| Seguridad | Pendiente |  |  |
+| Datos/RLS | Pendiente |  |  |
+| Testing | Pendiente |  |  |
+| UX/A11Y | Pendiente |  |  |
+| Mantenibilidad | Pendiente |  |  |
+
+## 8. Plan de saneamiento
+
+| Prioridad | Tipo | Archivo/Zona | Problema | Acción requerida | Agente | Bloquea construcción |
+|---|---|---|---|---|---|---|
+
+## 9. Veredicto final
+
+> Veredicto: PENDIENTE
+
+Valores permitidos:
+- 🟢 APTO
+- 🟠 CONDICIONADO
+- 🔴 REFACTOR TOTAL
+- ⛔ NO INCORPORAR
+
+## 10. Acción siguiente
+
+Pendiente.
+
+## 11. Señal para memoria
+
+- Actualizar INDEX: [sí / no]
+- Lessons learned: [N/A]
+- ADR candidate: [N/A]
+- Legacy adoption note: [N/A]
+EOF
+  echo "CREADO $AUDIT_FILE"
+else
+  echo "Audit File existente: $AUDIT_FILE"
+  grep -E '^> Estado:|^> Veredicto:' "$AUDIT_FILE" | head -2 || true
+fi
 ```
 
+### Regla
+
+No sobrescribir un reporte existente.
+Si existe, re-auditar sobre el mismo artefacto añadiendo nueva evidencia y fecha de actualización.
 
 ---
 
-## Paso 2: Invocar a @QwikAuditor
+## Paso 3 — Determinar carga permitida
 
+Para auditar legacy, se permite revisar la ruta indicada y standards necesarios.
+
+### Cargar siempre
+
+```text
+${input:legacyPath}
+docs/standards/ARQUITECTURA-FOLDER.md
+docs/standards/PROJECT-RULES-CORE.md
+docs/standards/QUALITY-STANDARDS.md
+docs/standards/SERIALIZATION-CONTRACTS.md
+docs/standards/DECISIONS-QWIK.md
+docs/standards/TESTING-POLICY.md
+docs/standards/LESSONS-LEARNED.md
 ```
-@QwikAuditor audita todo el código en `${input:legacyPath}`.
-El reporte está en `docs/audits/legacy-${input:legacyPath}-audit.md`.
 
-Analiza cada archivo contra estos estándares en orden:
+### Cargar si aplica
 
-1. `docs/standards/QUALITY-STANDARDS.md` — Resumabilidad O(1), Zod, Seguridad, Observabilidad
-2. `docs/standards/SERIALIZATION-CONTRACTS.md` — Fronteras $()
-3. `docs/standards/ARQUITECTURA-FOLDER.md` — SoC, capas, Orchestrator Pattern
-4. `docs/standards/DECISIONS-QWIK.md` — Sintaxis idiomática Qwik, primitivas, closures
-5. `docs/standards/LESSONS-LEARNED.md` — Bloque Top Lecciones como checklist adicional
-6. `docs/standards/TESTING-POLICY.md` — ¿Existen tests para los servicios auditados?
-7. `docs/standards/SECURITY-POLICIES.md` — Si hay tablas con datos de usuario: ¿tiene RLS?
+```text
+docs/standards/DECISIONS-DATA.md
+docs/standards/SECURITY-POLICIES.md
+docs/standards/RBAC-ROLES-PERMISSIONS.md
+docs/standards/DECISIONS-UI.md
+docs/standards/UX-GUIDE.md
+docs/sessions/INDEX.md
+Spec o Plan relacionados solo si INDEX o el código auditado los referencia
+```
 
-Para cada violación encontrada, clasifícala como:
-- 🔴 CRÍTICA: Rompe resumabilidad, expone datos sensibles o mezcla capas graves
-- 🟠 MAYOR: Deuda técnica significativa (lógica en rutas, tipos duplicados, sin Zod)
-- 🟡 MENOR: Mejoras de calidad (nombres, organización, comentarios)
+### Regla
 
-Rellena todas las secciones del reporte y emite el Veredicto Final.
-Si detectas violaciones críticas de arquitectura, marca como REFACTOR TOTAL.
+No auditar por lectura masiva del repo.
+El scope es `${input:legacyPath}`.
+
+---
+
+## Paso 4 — Invocar a @QwikAuditor
+
+Mensaje de handoff:
+
+```text
+@QwikAuditor
+
+Ejecuta Legacy Audit sobre `${input:legacyPath}`.
+
+Artefacto de auditoría:
+- docs/audits/legacy-[slug]-audit.md
+
+Scope:
+- Ruta auditada: `${input:legacyPath}`
+- No auditar fuera de esta ruta salvo dependencia directa imprescindible.
+
+Standards obligatorios:
+- docs/standards/ARQUITECTURA-FOLDER.md
+- docs/standards/PROJECT-RULES-CORE.md
+- docs/standards/QUALITY-STANDARDS.md
+- docs/standards/SERIALIZATION-CONTRACTS.md
+- docs/standards/DECISIONS-QWIK.md
+- docs/standards/TESTING-POLICY.md
+- docs/standards/LESSONS-LEARNED.md
+
+Standards condicionales:
+- docs/standards/DECISIONS-DATA.md si hay datos, queries, schema o persistencia.
+- docs/standards/SECURITY-POLICIES.md si hay auth, permisos, secretos o datos sensibles.
+- docs/standards/RBAC-ROLES-PERMISSIONS.md si hay roles/permisos.
+- docs/standards/DECISIONS-UI.md y UX-GUIDE.md si hay UI relevante.
+
+Tarea:
+1. Revisar solo el scope indicado.
+2. Clasificar hallazgos en 🔴 Crítico, 🟠 Mayor, 🟡 Menor.
+3. Identificar patrones correctos que deben preservarse.
+4. Evaluar arquitectura, Qwik/resumability, seguridad, datos/RLS, testing, UX y mantenibilidad según aplique.
+5. Rellenar el plan de saneamiento.
+6. Emitir veredicto final.
+7. Definir acción siguiente.
+
+Restricciones:
+- No escribir código.
+- No aplicar fixes.
+- No reestructurar.
+- No convertir deuda en feature.
+- No emitir APTO si hay hallazgos críticos bloqueantes.
 ```
 
 ---
 
-## Paso 3: Interpretar el Veredicto y Actuar
+## Paso 5 — Veredictos permitidos
 
-Usa esta tabla para identificar la acción según el veredicto de `@QwikAuditor`:
+El Auditor debe emitir exactamente uno:
 
 | Veredicto | Significado | Acción inmediata |
 |---|---|---|
-| 🟢 **APTO** | Sin bloqueos; deuda menor o inexistente | Continúa con `/feature` o `/bug-fix` directamente |
-| 🟠 **CONDICIONADO** | Deuda 🔴/🟠 que debe resolverse antes de construir | Sanear ítems críticos y mayores, luego re-auditar |
-| 🔴 **REFACTOR TOTAL** | Deuda estructural que requiere rediseño de dominio | Escalar a `@QwikArchitect` para plan de rediseño |
+| 🟢 APTO | Se puede construir encima con riesgo aceptable | Permitir entrada a `/new-feature`, `/bug-fix` u `/optimizer-code` según caso |
+| 🟠 CONDICIONADO | Hay deuda que debe sanearse antes de construir nueva funcionalidad | Crear plan de saneamiento acotado y re-auditar |
+| 🔴 REFACTOR TOTAL | La estructura no es segura para evolución incremental | Escalar a `@QwikArchitect` para rediseño |
+| ⛔ NO INCORPORAR | El código es inseguro, irrecuperable o no compensa adoptarlo | Aislar, sustituir o descartar |
+
+---
+
+## Paso 6 — Criterios de bloqueo
+
+Marcar como mínimo `🟠 CONDICIONADO` si hay:
+
+- lógica de negocio relevante en `src/routes/`;
+- servicios sin tests obligatorios;
+- duplicación grave de tipos/schemas;
+- uso no idiomático de Qwik que afecte mantenibilidad;
+- validación server-side incompleta;
+- manejo de errores opaco;
+- deuda que puede generar regresión al construir encima.
+
+Marcar como mínimo `🔴 REFACTOR TOTAL` si hay:
+
+- mezcla estructural severa de capas;
+- cruce server/client peligroso;
+- patrones incompatibles con resumability;
+- seguridad rota o exposición de datos;
+- RLS ausente donde sea obligatoria;
+- diseño que impide tests razonables;
+- arquitectura imposible de evolucionar sin reescritura.
+
+Marcar `⛔ NO INCORPORAR` si:
+
+- el código introduce riesgo de seguridad inaceptable;
+- depende de APIs obsoletas o incompatibles sin plan razonable;
+- está tan acoplado que reescribir es más barato que sanear;
+- no hay evidencia suficiente para confiar en su comportamiento.
+
+---
+
+## Paso 7 — Acciones tras veredicto
 
 ### 🟢 APTO
 
+```text
+El código legacy puede entrar al flujo SDD normal.
+Siguiente paso permitido: /new-feature, /bug-fix u /optimizer-code según objetivo.
 ```
-→ Continúa directamente con /feature o /bug-fix
-```
+
+Regla:
+- documentar deuda menor si existe;
+- no exigir refactor preventivo innecesario.
 
 ### 🟠 CONDICIONADO
 
+```text
+No construir nueva funcionalidad encima todavía.
+Sanear primero los hallazgos críticos/mayores del plan.
 ```
-→ Para cada ítem 🔴 y 🟠 del plan de saneamiento:
-   @QwikBuilder [archivo] con scope acotado al ítem   ← deuda de implementación
-   /bug-fix [problema]                                 ← bugs reales
-→ Re-ejecuta /legacy-audit para verificar saneamiento
-→ Solo entonces procede con nueva feature
+
+Ruta recomendada:
+
+```text
+@QwikBuilder para saneamiento acotado de implementación
+@QwikDBA si el saneamiento toca datos/RLS
+@QwikArchitect si el saneamiento requiere frontera o estructura
+Re-ejecutar /legacy-audit después del saneamiento
 ```
 
 ### 🔴 REFACTOR TOTAL
 
-```
-→ Para cada ítem 🔴 y 🟠 del plan de saneamiento:
-   @QwikBuilder [archivo] con scope acotado al ítem   ← deuda de implementación
-   /bug-fix [problema]                                 ← bugs reales
-→ Re-ejecuta /legacy-audit para verificar saneamiento
-→ Solo entonces procede con nueva feature
+```text
+No sanear a base de parches.
+Escalar a @QwikArchitect para plan de rediseño.
 ```
 
-### 🔴 REFACTOR TOTAL
+Handoff:
 
+```text
+@QwikArchitect
+
+El código en `${input:legacyPath}` recibió veredicto 🔴 REFACTOR TOTAL.
+Lee `docs/audits/legacy-[slug]-audit.md` y diseña un plan de rediseño o reemplazo en `docs/plans/refactor-[slug].md`.
+No iniciar Builder hasta que el plan esté aprobado.
+Si hay datos/RLS implicados, coordinar con @QwikDBA.
 ```
-→ Llama a @QwikArchitect:
-  "El código en ${input:legacyPath} tiene deuda crítica estructural.
-   Lee docs/audits/legacy-${input:legacyPath}-audit.md y diseña
-   un plan de rediseño del dominio en
-   docs/plans/refactor-${input:legacyPath}.md"
-→ @QwikDBA valida schema si hay cambios de datos
-→ @QwikBuilder reimplementa limpio sobre el nuevo plan
-→ @QwikAuditor certifica el resultado
+
+### ⛔ NO INCORPORAR
+
+```text
+No incorporar este código al flujo SDD.
+Aislar, descartar o sustituir con implementación nueva basada en Spec aprobada.
+```
+
+Regla:
+- si se necesita la funcionalidad, volver a `/spec` y definirla limpiamente;
+- no migrar deuda irrecuperable por comodidad.
+
+---
+
+## Paso 8 — Actualización de memoria
+
+Activar `@QwikMemory` si:
+
+- se adopta legacy relevante;
+- se decide refactor total;
+- se descarta código por riesgo;
+- aparece lección reutilizable;
+- hay decisión estructural que merece ADR;
+- el INDEX debe reflejar una zona legacy contenida o saneada.
+
+Mensaje sugerido:
+
+```text
+@QwikMemory
+
+Legacy audit completado para `${input:legacyPath}`.
+Revisa `docs/audits/legacy-[slug]-audit.md`.
+Actualiza INDEX, snapshot o Lessons Learned solo si aporta continuidad real.
+No guardar ruido ni copiar el reporte completo.
 ```
 
 ---
 
-> 💡 **Nota:** El objetivo no es reescribir todo por reescribirlo. Es tener
-> una foto clara de la deuda real para tomar decisiones informadas. A veces
-> el código heredado está mejor de lo que parece — el audit te lo dirá.
+## Salida esperada
+
+```text
+LEGACY AUDIT REPORT — ${input:legacyPath}
+
+Ruta: [ruta]
+Audit file: docs/audits/legacy-[slug]-audit.md
+Scope: [archivo/carpeta/módulo]
+Hallazgos críticos: N
+Hallazgos mayores: N
+Hallazgos menores: N
+Veredicto: APTO / CONDICIONADO / REFACTOR TOTAL / NO INCORPORAR
+Acción siguiente: [acción concreta]
+Siguiente agente: [@QwikOrchestrator / @QwikBuilder / @QwikArchitect / @QwikDBA / @QwikMemory / STOP]
+Memory signal: sí / no
+```
+
+---
+
+## Regla final
+
+`/legacy-audit` no significa “arregla legacy”.
+
+`/legacy-audit` significa:
+
+```text
+Determina objetivamente si este código puede entrar al flujo SDD, necesita saneamiento, requiere rediseño o debe descartarse.
+```
+
+Sin veredicto, no hay construcción encima.
