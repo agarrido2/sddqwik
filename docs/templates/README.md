@@ -16,13 +16,9 @@ No inventar nuevos templates desde esta guía. Si el sistema necesita plantillas
 
 ## Estado actual
 
-| Fichero | Estado | Uso en flujo principal |
-|---|---|---|
-| `PRD-TEMPLATE.md` | Legacy / fuera del flujo operativo principal / pendiente de redefinir | No activo |
-| `BLUEPRINT-TEMPLATE.md` | Legacy / fuera del flujo operativo principal / pendiente de redefinir | No activo |
+No hay templates activos propios del flujo `spec-first-garrido` en este directorio.
 
-Estos ficheros no se borran todavía.
-Tampoco se reinterpretan todavía.
+No hay templates legacy conservados como parte del sistema actual.
 
 ---
 
@@ -61,16 +57,17 @@ docs/sessions/[feature]-[timestamp].md
 
 `Implementation Tasks` viven dentro de `docs/plans/[feature].md`.
 
+La Spec la genera `/spec [feature]`.
+El Plan lo genera `@QwikArchitect`.
+Audit, Polish y Memory generan sus propios artefactos.
+
 ---
 
 ## Reglas
 
 ```text
-No usar templates legacy como gate operativo.
-No recomendar templates legacy desde el flujo principal.
-No crear carpetas o artefactos legacy desde esta guía.
-No editar los templates legacy salvo cambio explícito posterior.
 No crear templates spec-first sin una decisión explícita.
+No listar templates que no existan o que hayan sido retirados del sistema.
 ```
 
 ---
@@ -87,4 +84,5 @@ agente que lo consume
 artefacto que produce
 ruta esperada de las instancias
 si es activo o legacy/no activo
+si reemplaza o retira otro artefacto previo
 ```

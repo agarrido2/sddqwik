@@ -21,29 +21,17 @@ Si el sistema necesita plantillas para Specs, Plans, Audits o Memory, deben defi
 
 ---
 
-## Templates legacy / no activos
+## Templates legacy
 
-Estos ficheros se conservan, pero no forman parte del flujo operativo principal y quedan pendientes de redefinir.
+No hay templates legacy conservados como parte del sistema actual.
 
-| Fichero | Estado | Uso en flujo principal |
-|---|---|---|
-| `PRD-TEMPLATE.md` | Legacy / pendiente de redefinir | No activo |
-| `BLUEPRINT-TEMPLATE.md` | Legacy / pendiente de redefinir | No activo |
-
-Reglas:
-
-```text
-No usarlos como gate operativo.
-No recomendarlos desde el flujo principal.
-No reinterpretarlos todavía.
-No borrarlos todavía.
-```
+Los artefactos retirados no deben listarse ni recomendarse desde este índice.
 
 ---
 
 ## Artefactos del flujo spec-first
 
-Los artefactos operativos actuales son producidos por agentes y no por templates activos en este directorio:
+Los artefactos operativos actuales son producidos por comandos y agentes, no por templates activos en este directorio:
 
 ```text
 docs/specs/[feature].md
@@ -54,7 +42,10 @@ docs/sessions/INDEX.md
 docs/sessions/[feature]-[timestamp].md
 ```
 
+La Spec la genera `/spec [feature]`.
+El Plan lo genera `@QwikArchitect`.
 `Implementation Tasks` viven dentro de `docs/plans/[feature].md`.
+Audit, Polish y Memory generan sus propios artefactos.
 
 ---
 
@@ -62,7 +53,7 @@ docs/sessions/[feature]-[timestamp].md
 
 - Los templates activos se copian y rellenan — nunca se editan como plantilla base.
 - El fichero original permanece vacío y reutilizable.
-- Este índice debe separar templates activos de templates legacy/no activos.
+- Este índice debe listar solo templates que existan y sigan formando parte del sistema.
 - Si no hay templates activos, debe decirlo explícitamente.
 
 ---
@@ -71,5 +62,5 @@ docs/sessions/[feature]-[timestamp].md
 
 1. Crear el fichero en `docs/templates/nombre-TEMPLATE.md`
 2. Añadir fila en este INDEX
-3. Indicar si pertenece al flujo spec-first o si es legacy/no activo
+3. Indicar si pertenece al flujo spec-first
 4. Indicar quién lo consume y dónde se guardan las instancias
