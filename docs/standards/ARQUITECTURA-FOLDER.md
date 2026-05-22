@@ -1,4 +1,4 @@
-# **Arquitectura Canónica Definitiva para Qwik + Supabase**
+# **Arquitectura Canónica Definitiva**
 
 **Propósito**:
 Este documento establece la arquitectura y las reglas canónicas para la construcción de aplicaciones Qwik con secciones públicas y privadas.
