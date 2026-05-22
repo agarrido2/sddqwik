@@ -2,7 +2,7 @@
 
 > **Propósito:** definir el proceso completo de Spec-Driven Development usado por SDD Qwik.
 > **Audiencia:** desarrolladores, agentes IA y nuevos colaboradores.
-> **Versión:** 2026.4
+> **Versión:** spec-first-garrido
 
 ---
 
@@ -29,8 +29,6 @@ L1 — Memoria semántica
      docs/standards/*.md
 
 L2 — Memoria episódica/documental
-     docs/prd/
-     docs/blueprint/
      docs/specs/
      docs/plans/
      docs/audits/
@@ -49,9 +47,7 @@ L3 — Memoria de trabajo
 ## 3. Ciclo completo SDD
 
 ```text
-PRD Approved
-  ↓
-/blueprint [project]
+/setup
   ↓
 /spec [feature]
   ↓
@@ -59,9 +55,11 @@ PRD Approved
   ↓
 @QwikOrchestrator
   ↓
-@QwikArchitect / @QwikDBA
+@QwikArchitect crea Plan técnico + Implementation Tasks
   ↓
-@QwikBuilder
+@QwikDBA si aplica
+  ↓
+@QwikBuilder ejecuta tasks
   ↓
 @QwikAuditor
   ↓
@@ -70,34 +68,25 @@ PRD Approved
 @QwikMemory
 ```
 
----
+**Regla central:** sin Spec `Approved`, no hay implementación.
 
-## 4. Blueprint
-
-**Entrada:** `/blueprint [project]`  
-**Agente:** `@QwikBlueprint`  
-**Input:** PRD aprobado en `docs/prd/[project]-prd.md`  
-**Output:** `docs/blueprint/[project]-blueprint.md`
-
-El Blueprint traduce el PRD en módulos, fases, dependencias, zonas de aplicación, mapa preliminar de datos, riesgos, decisiones abiertas y orden recomendado de Specs.
-
-**Gate:** sin PRD Approved no hay Blueprint formal. Sin Blueprint Approved, un proyecto modular grande no debería iniciar Specs de producción.
+El primer artefacto contractual del workflow operativo es la Spec. PRD y Blueprint no gobiernan el workflow operativo principal ni establecen gates obligatorios para construir features.
 
 ---
 
-## 5. Spec
+## 4. Spec
 
 **Entrada:** `/spec [feature]`  
 **Agente:** `@QwikSpeccer`  
 **Output:** `docs/specs/[feature].md`
 
-La Spec define propósito, usuarios, Scope IN, Scope OUT, Acceptance Criteria funcionales y no funcionales, contratos de datos, estados, riesgos y criterios de auditoría.
+La Spec define el WHAT contractual: propósito, usuarios, Scope IN, Scope OUT, Acceptance Criteria funcionales y no funcionales, contratos de datos, estados, riesgos y criterios de auditoría.
 
 **Gate:** sin Spec `Approved`, no se escribe código de feature. Sin AC verificables, la Spec sigue en Review.
 
 ---
 
-## 6. Entrada segura a feature
+## 5. Entrada segura a feature
 
 **Entrada:** `/new-feature [feature]`  
 **Agente inicial:** prompt `/new-feature` + `@QwikOrchestrator`  
@@ -106,41 +95,43 @@ La Spec define propósito, usuarios, Scope IN, Scope OUT, Acceptance Criteria fu
 
 `/new-feature` no implementa código y no crea Spec. Verifica Spec Approved, consulta INDEX, revisa dependencias, crea o preserva `docs/plans/[feature].md` y entrega a Orchestrator/Architect sin saltar directamente a Builder.
 
-**Gate:** sin Plan técnico aprobado/listo, Builder no implementa.
+**Gate:** sin Plan técnico con Implementation Tasks, Builder no implementa.
 
 ---
 
-## 7. Plan técnico
+## 6. Plan técnico
 
 **Agente:** `@QwikArchitect`  
 **Sub-agente si aplica:** `@QwikDBA`  
 **Output:** `docs/plans/[feature].md`
 
-Architect traduce el WHAT en HOW: archivos esperados, fronteras `$()`, rutas, capas, servicios, estado serializable, riesgos, tests y datos/RLS si aplica.
+Architect traduce la Spec a ejecución técnica: archivos esperados, fronteras `$()`, rutas, capas, servicios, estado serializable, riesgos, tests, datos/RLS si aplica y una lista ordenada de Implementation Tasks.
+
+Las Implementation Tasks son el contrato de ejecución del Builder. Deben ser concretas, verificables, ordenadas y trazables a la Spec y al Plan.
 
 DBA interviene cuando hay schema, migraciones, queries, constraints, permisos, RLS o integridad de datos.
 
 ---
 
-## 8. Build
+## 7. Build
 
 **Agente:** `@QwikBuilder`  
-**Input:** Spec Approved + Plan aprobado/listo + datos/RLS resueltos si aplican  
+**Input:** Spec Approved + Plan técnico con Implementation Tasks + datos/RLS resueltos si aplican  
 **Output:** código + Delivery Summary verificable
 
-Builder implementa el Plan. No reinterpreta producto, no amplía scope, no inventa datos y no parchea problemas fuera de scope.
+Builder ejecuta exclusivamente las tasks definidas. No reinterpreta producto, no amplía scope, no inventa datos y no parchea problemas fuera de scope.
 
-Su entrega debe incluir matriz AC → implementación → evidencia, archivos modificados, decisiones, validación, datos/RLS si aplica, desviaciones y riesgos.
+Su entrega debe incluir matriz AC → task → implementación → evidencia, archivos modificados, decisiones, validación, datos/RLS si aplica, desviaciones y riesgos.
 
 ---
 
-## 9. Audit
+## 8. Audit
 
 **Agente:** `@QwikAuditor`  
-**Input:** Spec + Plan + Delivery Summary + código  
+**Input:** Spec + Plan + Implementation Tasks + Delivery Summary + código + evidencia  
 **Output:** `docs/audits/[feature]-audit.md`
 
-Auditor verifica cumplimiento funcional contra AC, cumplimiento técnico contra Plan y cumplimiento sistémico contra standards.
+Auditor verifica cumplimiento funcional contra AC, cumplimiento técnico contra Plan, ejecución contra Implementation Tasks y cumplimiento sistémico contra standards.
 
 Sin matriz AC completa y evidencia verificable, no hay `PASSED`.
 
@@ -152,7 +143,7 @@ Audit FAILED ciclo 3+ → Architect
 
 ---
 
-## 10. Polish
+## 9. Polish
 
 **Agente:** `@QwikPolisher`  
 **Input:** Audit PASSED  
@@ -162,7 +153,7 @@ Polisher no cambia funcionalidad. Su foco es build, typecheck/test si existen sc
 
 ---
 
-## 11. Memory
+## 10. Memory
 
 **Agente:** `@QwikMemory`
 
@@ -172,7 +163,7 @@ Una feature `PRODUCTION-READY` no está cerrada del todo hasta que Memory deja e
 
 ---
 
-## 12. Flujos especiales
+## 11. Flujos especiales
 
 ```text
 /bug-fix [bug-id]       → incidencias con diagnóstico, causa raíz y verificación
@@ -184,45 +175,46 @@ Una feature `PRODUCTION-READY` no está cerrada del todo hasta que Memory deja e
 
 ---
 
-## 13. Trazabilidad completa
+## 12. Trazabilidad completa
 
 ```text
-Qué quería el cliente      → docs/prd/[project]-prd.md
-Cómo se ordenó el proyecto → docs/blueprint/[project]-blueprint.md
-Qué se aprobó construir    → docs/specs/[feature].md
-Cómo se decidió construir  → docs/plans/[feature].md
-Qué se implementó          → Delivery Summary del Plan
-Qué se verificó            → docs/audits/[feature]-audit.md
-Por qué una decisión existe→ docs/adr/ADR-NNN-*.md
-Cómo se retoma             → docs/sessions/INDEX.md + snapshots
+Qué se aprobó construir       → docs/specs/[feature].md
+Cómo se decidió construir     → docs/plans/[feature].md
+Qué ordena la ejecución       → Implementation Tasks del Plan
+Qué se implementó             → Delivery Summary del Builder
+Qué se verificó               → docs/audits/[feature]-audit.md
+Por qué una decisión existe   → docs/adr/ADR-NNN-*.md
+Cómo se retoma                → docs/sessions/INDEX.md + snapshots
 ```
 
 ---
 
-## 14. Anti-patrones SDD
+## 13. Anti-patrones SDD
 
 | Anti-patrón | Síntoma | Consecuencia |
 |---|---|---|
-| Blueprint ausente | Specs sin orden ni dependencias | Retrabajo |
+| Spec ausente | Se intenta implementar desde conversación o intención vaga | Builder improvisa |
 | Spec vaga | “Hacer que funcione X” | Builder improvisa |
 | Spec post-hoc | Spec escrita después del código | AC descriptivos, no contractuales |
 | `/new-feature` omitido | Se salta pre-flight y Plan File | Pérdida de trazabilidad |
 | Plan sin Spec | Architect inventa el WHAT | Código para problema equivocado |
+| Plan sin Implementation Tasks | Builder recibe intención técnica, no ejecución ordenada | Implementación desigual y difícil de auditar |
 | Builder sin Plan | Implementación por intuición | Deuda y scope creep |
-| Auditor sin AC | Solo revisa calidad técnica | Cumplimiento funcional débil |
+| Builder fuera de tasks | Cambios no trazables al contrato aprobado | Scope creep |
+| Auditor sin AC o evidencia | Solo revisa calidad técnica | Cumplimiento funcional débil |
 | Memory no persistida | No se actualiza INDEX/snapshot | Pérdida de continuidad |
 
 ---
 
-## 15. Pregunta de oro
+## 14. Pregunta de oro
 
 ```text
 ¿Tengo el contrato correcto para esta acción?
 ```
 
-- Proyecto nuevo → PRD Approved + `/blueprint`
 - Feature nueva → `/spec` Approved + `/new-feature`
-- Implementación → Plan aprobado/listo
+- Implementación → Plan técnico con Implementation Tasks
+- Datos/RLS → `@QwikDBA` resuelto si aplica
 - Bug → `/bug-fix`
 - Legacy → `/legacy-audit`
 - Refactor local → `/optimizer-code`

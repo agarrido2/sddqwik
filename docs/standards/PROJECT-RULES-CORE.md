@@ -2,7 +2,7 @@
 
 > Stack: Qwik + Qwik City + Bun + Supabase + Drizzle ORM + Tailwind v4 + Context7 MCP
 > Paradigma: Spec-Driven Development + workflow multi-agente
-> Versión: 2026.4
+> Versión: spec-first-garrido
 
 Este archivo define reglas nucleares del proyecto.
 Está por encima de prompts puntuales cuando haya conflicto, salvo instrucciones explícitas del usuario que no rompan la seguridad ni los gates estructurales.
@@ -26,9 +26,7 @@ Sin contrato aprobado, no se implementa.
 Flujo canónico:
 
 ```text
-PRD Approved
-  ↓
-/blueprint [project]
+/setup
   ↓
 /spec [feature]
   ↓
@@ -36,9 +34,11 @@ PRD Approved
   ↓
 @QwikOrchestrator
   ↓
-@QwikArchitect / @QwikDBA
+@QwikArchitect crea Plan técnico + Implementation Tasks
   ↓
-@QwikBuilder
+@QwikDBA si aplica
+  ↓
+@QwikBuilder ejecuta tasks
   ↓
 @QwikAuditor
   ↓
@@ -50,14 +50,16 @@ PRD Approved
 Reglas duras:
 
 ```text
-Sin Blueprint Approved en proyecto modular → no Specs de producción.
 Sin Spec Approved → no código de feature.
-Sin Plan aprobado/listo → Builder no implementa.
+Sin Plan técnico con Implementation Tasks → Builder no implementa.
 Sin datos/RLS resueltos si aplican → Builder no implementa.
 Sin Delivery Summary verificable → Auditor no puede aprobar.
 Sin Audit PASSED → Polisher no actúa.
 Sin Memory/INDEX actualizado → cierre incompleto.
 ```
+
+> Regla central: **Sin Spec Approved, no hay implementación.**
+> PRD y Blueprint no gobiernan el flujo operativo principal.
 
 `/feature` es referencia obsoleta.
 El comando oficial es:
@@ -134,8 +136,6 @@ docs/standards/DECISIONS-DATA.md
 
 ```text
 docs/
-├── prd/        → PRDs aprobados por cliente/proyecto
-├── blueprint/  → Blueprints técnicos aprobados
 ├── templates/  → Plantillas base
 ├── specs/      → Specs formales: fuente del QUÉ
 ├── plans/      → Plan Files: fuente del CÓMO
@@ -161,12 +161,11 @@ Los snapshots pueden ser volátiles, pero el INDEX no debe perderse por un `.git
 ## 6. Jerarquía de agentes
 
 ```text
-@QwikOrchestrator → router central, gates, handoffs, contexto mínimo
-@QwikBlueprint    → PRD → Blueprint
+@QwikOrchestrator → router central, gates spec-first, handoffs, contexto mínimo
 @QwikSpeccer      → Feature → Spec verificable
-@QwikArchitect    → Spec → Plan técnico
+@QwikArchitect    → Spec Approved → Plan técnico + Implementation Tasks
 @QwikDBA          → datos, schema, queries, constraints, permisos, RLS
-@QwikBuilder      → Plan → código + Delivery Summary
+@QwikBuilder      → Implementation Tasks → código + Delivery Summary
 @QwikAuditor      → verificación con evidencia
 @QwikPolisher     → production readiness
 @QwikBugFix       → ciclo formal de bugs
@@ -186,7 +185,7 @@ Orden recomendado:
 2. `AGENTS.md`.
 3. `.github/copilot-instructions.md`.
 4. Standard aplicable al dominio.
-5. Artefacto aprobado más cercano: Blueprint, Spec, Plan, Audit, Bug report.
+5. Artefacto aprobado más cercano: Spec, Plan, Audit, Bug report.
 6. Prompt actual.
 7. Contexto conversacional.
 
@@ -231,7 +230,7 @@ Antes de usar librerías o APIs dudosas:
 Una feature solo debería considerarse lista si:
 
 - [ ] existe Spec Approved;
-- [ ] existe Plan aprobado/listo;
+- [ ] existe Plan aprobado/listo con Implementation Tasks;
 - [ ] datos/RLS están resueltos si aplican;
 - [ ] Builder dejó Delivery Summary verificable;
 - [ ] tests obligatorios están presentes o justificados;
@@ -247,8 +246,6 @@ Una feature solo debería considerarse lista si:
 Debe versionarse:
 
 ```text
-docs/prd/
-docs/blueprint/
 docs/specs/
 docs/plans/
 docs/audits/
