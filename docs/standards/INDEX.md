@@ -28,9 +28,10 @@
 
 ## Qué leer según la tarea
 
-| Tarea | Standards a cargar |
+| Tarea | Standards/contexto a cargar |
 |---|---|
-| Nuevo proyecto (PRD → Blueprint) | `docs/templates/PRD-TEMPLATE.md` + `docs/templates/BLUEPRINT-TEMPLATE.md` |
+| Entrada operativa principal | `SDD-WORKFLOW.md` + `PROJECT-RULES-CORE.md`; estado en `docs/sessions/INDEX.md` |
+| Flujo de feature spec-first | Spec → Plan → Implementation Tasks → Build → Audit → Polish → Memory |
 | Nueva feature | `ARQUITECTURA-FOLDER.md` + `PROJECT-RULES-CORE.md` + `RBAC-ROLES-PERMISSIONS.md` si hay usuarios |
 | Implementar componente UI | `DECISIONS-QWIK.md` + `DECISIONS-UI.md` + `SERIALIZATION-CONTRACTS.md` |
 | Cambios en DB / schema | `DECISIONS-DATA.md` + `SECURITY-POLICIES.md` + `TESTING-POLICY.md` |

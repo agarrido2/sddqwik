@@ -2,7 +2,7 @@
 
 > Stack: Qwik + Qwik City + Bun + Supabase + Drizzle + Tailwind v4 + Context7
 > Paradigm: Spec-Driven Development
-> Version: 2026.4
+> Version: spec-first-garrido
 
 This manifest is the operational map of the SDD Qwik system.
 
@@ -21,17 +21,17 @@ The system exists to prevent AI from improvising product, architecture, data mod
 Every feature must move through explicit artifacts:
 
 ```text
-PRD → Blueprint → Spec → Plan → Build → Audit → Polish → Memory
+Spec → Plan → Build → Audit → Polish → Memory
 ```
+
+> Core rule: **No Spec Approved, no implementation.**
 
 ---
 
 ## 2. Official flow
 
 ```text
-PRD Approved
-  ↓
-/blueprint [project]
+/setup
   ↓
 /spec [feature]
   ↓
@@ -39,11 +39,11 @@ PRD Approved
   ↓
 @QwikOrchestrator
   ↓
-@QwikArchitect
+@QwikArchitect creates Plan + Implementation Tasks
   ↓
 @QwikDBA if Data/RLS is READY_FOR_DBA
   ↓
-@QwikBuilder
+@QwikBuilder executes tasks
   ↓
 @QwikAuditor
   ↓
@@ -55,7 +55,6 @@ PRD Approved
 Rules:
 
 ```text
-/blueprint does not implement.
 /spec does not implement.
 /new-feature does not implement.
 Architect does not implement.
@@ -73,11 +72,10 @@ Memory does not store noise.
 | Agent | Role | Main artifact/output |
 |---|---|---|
 | `@QwikOrchestrator` | Router, gates, handoffs, context control | routing decision |
-| `@QwikBlueprint` | PRD → modules, phases, dependencies, Spec Queue | `docs/blueprint/[project]-blueprint.md` |
 | `@QwikSpeccer` | Functional contract and verifiable AC | `docs/specs/[feature].md` |
-| `@QwikArchitect` | Technical Plan and implementation path | `docs/plans/[feature].md` |
+| `@QwikArchitect` | Spec Approved → Technical Plan + Implementation Tasks | `docs/plans/[feature].md` |
 | `@QwikDBA` | Data, schema, queries, migrations, permissions, RLS | DBA Delivery Summary |
-| `@QwikBuilder` | Implementation from approved Plan | code + Delivery Summary |
+| `@QwikBuilder` | Executes Implementation Tasks from approved Plan | code + Delivery Summary |
 | `@QwikAuditor` | Evidence-based verification | `docs/audits/[feature]-audit.md` |
 | `@QwikPolisher` | Production readiness after Audit PASSED | `docs/audits/[feature]-polish.md` |
 | `@QwikBugFix` | Bug lifecycle and root cause routing | `docs/bugs/[bug-id].md` |
@@ -90,9 +88,8 @@ Memory does not store noise.
 | Command | Owner | Purpose |
 |---|---|---|
 | `/setup` | Orchestrator | workspace health check |
-| `/blueprint [project]` | Blueprint | PRD Approved → Blueprint Review/Approved |
-| `/spec [feature]` | Speccer | functional contract with AC |
-| `/new-feature [feature]` | Orchestrator | safe entry into planning/build cycle |
+| `/spec [feature]` | Speccer | functional contract with AC. **Main entry point.** |
+| `/new-feature [feature]` | Orchestrator | safe entry into planning/build cycle from Spec Approved |
 | `/bug-fix [bug-id]` | BugFix | bug report, diagnosis, fix routing, verification |
 | `/legacy-audit [path]` | Auditor | legacy verdict before building on top |
 | `/optimizer-code [path]` | Builder/Auditor | local refactor without hidden behavior change |
@@ -107,8 +104,6 @@ Memory does not store noise.
 
 | Artifact | Purpose |
 |---|---|
-| `docs/prd/[project]-prd.md` | product/customer contract |
-| `docs/blueprint/[project]-blueprint.md` | project map, modules, phases, Spec Queue |
 | `docs/specs/[feature].md` | what must be built |
 | `docs/plans/[feature].md` | how it will be built |
 | `docs/audits/[feature]-audit.md` | verification evidence |
@@ -121,14 +116,6 @@ Memory does not store noise.
 ---
 
 ## 6. Gate states
-
-### Blueprint
-
-```text
-DRAFT → REVIEW → APPROVED | REJECTED
-```
-
-No production Specs for modular projects without Blueprint Approved.
 
 ### Spec
 
@@ -190,16 +177,6 @@ No bug fix without root cause.
 
 ## 7. Canonical handoffs
 
-### New project
-
-```text
-PRD Approved
-→ /blueprint
-→ Blueprint Review
-→ user approval
-→ /spec [first-spec]
-```
-
 ### New feature
 
 ```text
@@ -208,9 +185,9 @@ PRD Approved
 → user approval
 → /new-feature [feature]
 → Orchestrator
-→ Architect
+→ Architect creates Plan + Implementation Tasks
 → DBA if needed
-→ Builder
+→ Builder executes tasks
 → Auditor
 → Polisher
 → Memory
@@ -254,8 +231,8 @@ The Orchestrator must first determine the correct contract.
 | Situation | Correct next step |
 |---|---|
 | No INDEX | `/setup` or Memory initialization |
-| PRD Approved, no Blueprint | `/blueprint [project]` |
-| Blueprint Approved, next module pending | `/spec [feature]` |
+| Feature without Spec | `/spec [feature]` |
+| Spec Draft/Review | `@QwikSpeccer` via `/spec` |
 | Spec Approved, no Plan | `/new-feature [feature]` |
 | Plan READY_FOR_DBA | `@QwikDBA` |
 | Plan READY_FOR_BUILD | `@QwikBuilder` |
@@ -313,7 +290,7 @@ The exact data/schema location comes from standards, Plan, DBA and the actual pr
 |---|---|
 | `ARQUITECTURA-FOLDER.md` | Architect, Builder, Auditor |
 | `PROJECT-RULES-CORE.md` | all agents |
-| `SDD-WORKFLOW.md` | Orchestrator, Blueprint, Speccer |
+| `SDD-WORKFLOW.md` | Orchestrator, Speccer |
 | `DECISIONS-QWIK.md` | Architect, Builder, Auditor, Polisher |
 | `DECISIONS-DATA.md` | DBA, Architect, Builder, Auditor |
 | `DECISIONS-UI.md` | Builder, Polisher |

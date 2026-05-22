@@ -1,8 +1,8 @@
 ---
-# EXTERNAL_AGENT_PATH: ".github/prompts/setup.prompt.md"
+# EXTERNAL_AGENT_PATH: "github/prompts/setup.prompt.md"
 name: setup
 description: >
-  Inicializa o verifica el workspace SDD Qwik. Comprueba estructura operativa,
+  Inicializa o verifica el workspace SDD Qwik para flujo spec-first. Comprueba estructura operativa,
   agentes, prompts, standards, templates, memoria operativa e índice del proyecto,
   y genera un health report accionable sin exigir comandos adicionales al usuario.
 tools: ["edit", "execute/runInTerminal", "read"]
@@ -13,7 +13,7 @@ argument-hint: "example: /setup"
 
 ## Objetivo
 
-`/setup` es el punto único de inicialización, diagnóstico y verificación global del sistema SDD Qwik.
+`/setup` es el punto único de inicialización, diagnóstico y verificación global del sistema SDD Qwik spec-first.
 
 No añade carga cognitiva al usuario.
 No requiere comandos auxiliares.
@@ -24,7 +24,7 @@ Su responsabilidad es:
 1. verificar estructura operativa mínima;
 2. crear estructura documental si falta;
 3. verificar que el sistema agéntico es operable;
-4. verificar standards y templates canónicos;
+4. verificar standards canónicos y templates si aplica;
 5. asegurar memoria inicial;
 6. revisar estado del workspace desde `docs/sessions/INDEX.md`;
 7. emitir un informe claro con siguiente paso recomendado.
@@ -54,6 +54,8 @@ docs/sessions/INDEX.md
 
 Si el INDEX no existe, `/setup` debe crearlo.
 
+El setup operativo prepara el camino hacia `/spec [feature]`. PRD y Blueprint no forman parte del setup operativo principal ni son gates para considerar el sistema listo.
+
 ---
 
 ## Paso 1 — Verificar estructura agéntica
@@ -63,12 +65,15 @@ Ejecutar:
 ```bash
 echo "SDD QWIK SETUP — SYSTEM CHECK"
 
-SDD_GITHUB_DIR=".github"
-
-if [ -d ".github" ]; then
+if [ -d "github" ]; then
+  SDD_GITHUB_DIR="github"
+  echo "Estructura agéntica: OK github/"
+elif [ -d ".github" ]; then
+  SDD_GITHUB_DIR=".github"
   echo "Estructura agéntica: OK .github/"
 else
-  echo "Estructura agéntica: FALTA .github/"
+  SDD_GITHUB_DIR="github"
+  echo "Estructura agéntica: FALTA github/ o .github/"
 fi
 ```
 
@@ -80,8 +85,6 @@ Crear solo directorios canónicos.
 No crear código de aplicación.
 
 ```bash
-mkdir -p docs/prd
-mkdir -p docs/blueprint
 mkdir -p docs/templates
 mkdir -p docs/specs
 mkdir -p docs/plans
@@ -212,8 +215,6 @@ check_dir() {
   fi
 }
 
-check_dir "docs/prd"
-check_dir "docs/blueprint"
 check_dir "docs/templates"
 check_dir "docs/specs"
 check_dir "docs/plans"
@@ -252,7 +253,6 @@ check_agent() {
 }
 
 check_agent "qwik-orchestrator.agent.md"
-check_agent "qwik-blueprint.agent.md"
 check_agent "qwik-speccer.agent.md"
 check_agent "qwik-architect.agent.md"
 check_agent "qwik-dba.agent.md"
@@ -287,7 +287,7 @@ check_prompt() {
   fi
 }
 
-check_prompt "blueprint.prompt.md"
+check_prompt "setup.prompt.md"
 check_prompt "spec.prompt.md"
 check_prompt "new-feature.prompt.md"
 check_prompt "bug-fix.prompt.md"
@@ -295,7 +295,6 @@ check_prompt "legacy-audit.prompt.md"
 check_prompt "optimizer-code.prompt.md"
 check_prompt "memory-compact.prompt.md"
 check_prompt "new-session.prompt.md"
-check_prompt "setup.prompt.md"
 
 echo "Prompts: ${prompts_ok}/${prompts_total}"
 ```
@@ -352,24 +351,16 @@ Si falta `ARQUITECTURA-FOLDER.md`, `PROJECT-RULES-CORE.md`, `SDD-WORKFLOW.md`, `
 echo ""
 echo "TEMPLATES SDD QWIK"
 
-templates_ok=0
-templates_total=0
+templates_status="OK"
 
-check_template() {
-  templates_total=$((templates_total + 1))
-  file="docs/templates/$1"
-  if [ -f "$file" ]; then
-    echo "OK     $file"
-    templates_ok=$((templates_ok + 1))
-  else
-    echo "FALTA  $file"
-  fi
-}
+if [ -d "docs/templates" ]; then
+  echo "OK     docs/templates"
+else
+  templates_status="FALTA"
+  echo "FALTA  docs/templates"
+fi
 
-check_template "PRD-TEMPLATE.md"
-check_template "BLUEPRINT-TEMPLATE.md"
-
-echo "Templates: ${templates_ok}/${templates_total}"
+echo "Templates: ${templates_status}"
 ```
 
 ---
@@ -456,19 +447,19 @@ echo "ESTADO GENERAL"
 
 status="LISTO"
 
-if [ ! -d ".github" ]; then
+if [ ! -d "$SDD_GITHUB_DIR" ]; then
   status="CONFIGURACIÓN NECESARIA"
 fi
 
-if [ "$agents_ok" -lt "$agents_total" ] || [ "$prompts_ok" -lt "$prompts_total" ]; then
+if [ "$status" != "CONFIGURACIÓN NECESARIA" ] && { [ "$agents_ok" -lt "$agents_total" ] || [ "$prompts_ok" -lt "$prompts_total" ]; }; then
   status="REQUIERE ATENCIÓN"
 fi
 
-if [ "$standards_ok" -lt "$standards_total" ] || [ "$templates_ok" -lt "$templates_total" ]; then
+if [ "$status" != "CONFIGURACIÓN NECESARIA" ] && { [ "$standards_ok" -lt "$standards_total" ] || [ "$templates_status" != "OK" ]; }; then
   status="REQUIERE ATENCIÓN"
 fi
 
-if [ "$dirs_ok" -lt "$dirs_total" ]; then
+if [ "$status" != "CONFIGURACIÓN NECESARIA" ] && [ "$dirs_ok" -lt "$dirs_total" ]; then
   status="REQUIERE ATENCIÓN"
 fi
 
@@ -487,19 +478,14 @@ echo "SIGUIENTE PASO RECOMENDADO"
 
 if [ "$status" = "CONFIGURACIÓN NECESARIA" ]; then
   echo "- Completar instalación del sistema SDD Qwik."
-  echo "- Debe existir .github/ con agents/, prompts/ y copilot-instructions.md."
+  echo "- Debe existir github/ o .github/ con agents/, prompts/ y copilot-instructions.md."
 elif [ "$status" = "REQUIERE ATENCIÓN" ]; then
   echo "- Corregir los elementos marcados como FALTA antes de iniciar features nuevas."
 elif [ -f "docs/sessions/INDEX.md" ] && grep -qE '\|\s*(WIP|🚧 WIP|IN-PROGRESS|🟡 WIP)\s*\|' docs/sessions/INDEX.md; then
   echo "- Retomar la feature WIP desde @QwikOrchestrator."
   echo "- El Orchestrator debe leer docs/sessions/INDEX.md y cargar solo artefactos mínimos."
-elif [ -d "docs/prd" ] && ls docs/prd/*.md >/dev/null 2>&1 && ! ls docs/blueprint/*.md >/dev/null 2>&1; then
-  echo "- Ejecutar /blueprint [proyecto] si el PRD ya está aprobado."
-elif [ -d "docs/blueprint" ] && ls docs/blueprint/*.md >/dev/null 2>&1; then
-  echo "- Ejecutar /spec [módulo] para el siguiente módulo definido en el Blueprint."
 else
-  echo "- Crear o completar un PRD en docs/prd/ usando docs/templates/PRD-TEMPLATE.md."
-  echo "- Después ejecutar /blueprint [proyecto]."
+  echo "- Ejecutar /spec [feature] para crear el primer contrato de la siguiente feature."
 fi
 ```
 
@@ -510,12 +496,12 @@ fi
 ```text
 SDD QWIK SETUP REPORT
 
-Estructura agéntica: OK / FALTA
+Estructura agéntica: OK github/ / OK .github/ / FALTA
 Estructura base: N/N
-Agentes: N/10
-Prompts: N/9
+Agentes: N/9
+Prompts: N/8
 Standards: N/14
-Templates: N/2
+Templates: OK / FALTA
 INDEX memoria: OK / CREADO / FALTA
 Features totales: N
 WIP: N
@@ -537,12 +523,12 @@ Siguiente paso recomendado:
 
 El sistema tiene:
 
-- `.github/` disponible;
+- `github/` o `.github/` disponible;
 - estructura base presente;
 - agentes presentes;
 - prompts presentes;
 - standards canónicos presentes;
-- templates presentes;
+- `docs/templates/` disponible si aplica;
 - `docs/sessions/INDEX.md` disponible.
 
 ### REQUIERE ATENCIÓN
@@ -555,7 +541,7 @@ No iniciar features nuevas hasta revisar los elementos marcados como `FALTA`.
 
 No existe estructura suficiente para operar SDD Qwik.
 
-Falta `.github/` o la base documental está incompleta.
+Falta `github/` o `.github/`, o la base documental está incompleta.
 
 ---
 

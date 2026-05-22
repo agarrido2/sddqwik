@@ -2,7 +2,7 @@
 
 > Stack: Qwik + Qwik City + Bun + Supabase + Drizzle ORM + Tailwind v4 + Context7 MCP
 > Paradigma: Spec-Driven Development + multi-agent workflow
-> Versión: 2026.4
+> Versión: spec-first-garrido
 
 Estas instrucciones definen el comportamiento operativo de Copilot dentro de un proyecto que usa SDD Qwik.
 
@@ -26,9 +26,7 @@ La auditoría verifica ambos.
 Flujo principal:
 
 ```text
-PRD Approved
-  ↓
-/blueprint [project]
+/setup
   ↓
 /spec [feature]
   ↓
@@ -36,9 +34,11 @@ PRD Approved
   ↓
 @QwikOrchestrator
   ↓
-@QwikArchitect / @QwikDBA
+@QwikArchitect crea Plan técnico + Implementation Tasks
   ↓
-@QwikBuilder
+@QwikDBA si aplica
+  ↓
+@QwikBuilder ejecuta tasks
   ↓
 @QwikAuditor
   ↓
@@ -50,15 +50,16 @@ PRD Approved
 ### Gates obligatorios
 
 ```text
-Sin PRD Approved → no Blueprint formal.
-Sin Blueprint Approved en proyecto modular → no primera Spec seria.
 Sin Spec Approved → no código de feature.
-Sin Plan aprobado/listo → Builder no implementa.
+Sin Plan técnico con Implementation Tasks → Builder no implementa.
 Sin datos/RLS resueltos si aplican → Builder no implementa.
 Sin Delivery Summary verificable → Auditor no puede aprobar.
 Sin Audit PASSED → Polisher no actúa.
 Sin Memory/INDEX actualizado → feature no está cerrada del todo.
 ```
+
+> Regla central: **Sin Spec Approved, no hay implementación.**
+> PRD y Blueprint no forman parte del flujo operativo principal.
 
 ---
 
@@ -67,8 +68,7 @@ Sin Memory/INDEX actualizado → feature no está cerrada del todo.
 | Comando | Uso |
 |---|---|
 | `/setup` | Inicializa/verifica workspace y emite health check |
-| `/blueprint [project]` | Convierte PRD Approved en módulos, fases y orden de Specs |
-| `/spec [feature]` | Crea contrato verificable con AC binarios y aprobación explícita |
+| `/spec [feature]` | Crea contrato verificable con AC binarios y aprobación explícita. **Entrada principal.** |
 | `/new-feature [feature]` | Abre ciclo de construcción seguro desde Spec Approved |
 | `/bug-fix [bug-id]` | Diagnóstico, causa raíz, fix y verificación de bug |
 | `/legacy-audit [path]` | Veredicto antes de adoptar código heredado o no confiable |
@@ -92,12 +92,11 @@ Si aparece `/feature` en documentación antigua, interpretarlo como referencia o
 ## 3. Jerarquía de agentes
 
 ```text
-@QwikOrchestrator  → Router central. Verifica gates y enruta. No escribe código.
-@QwikBlueprint     → PRD → Blueprint técnico por módulos/fases.
+@QwikOrchestrator  → Router central. Verifica gates spec-first y enruta. No escribe código.
 @QwikSpeccer       → Feature → Spec formal con AC verificables.
-@QwikArchitect     → Spec Approved → Plan técnico ejecutable.
+@QwikArchitect     → Spec Approved → Plan técnico + Implementation Tasks.
 @QwikDBA           → Datos, schema, queries, constraints, permisos y RLS.
-@QwikBuilder       → Plan aprobado → implementación trazable.
+@QwikBuilder       → Plan aprobado con Implementation Tasks → implementación trazable.
 @QwikAuditor       → Verificación con evidencia. PASSED/FAILED.
 @QwikPolisher      → Production readiness tras Audit PASSED.
 @QwikBugFix        → Ciclo formal de bugs.
@@ -245,7 +244,7 @@ Builder solo puede implementar si:
 
 ```text
 Spec Approved
-Plan aprobado/listo
+Plan aprobado/listo con Implementation Tasks definidos
 datos/RLS resueltos si aplican
 AC claros
 Scope OUT visible

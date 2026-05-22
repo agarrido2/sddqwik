@@ -7,19 +7,19 @@ SDD Qwik es un sistema agéntico de **Spec-Driven Development** para construir a
 La idea central es simple:
 
 ```text
-Sin contrato aprobado, no hay código.
+Sin Spec Approved, no hay implementación.
 ```
 
-El sistema evita que la IA improvise. Cada feature pasa por Spec, Plan, Build, Audit, Polish y Memory.
+Versión/concepto operativo: `spec-first-garrido`.
+
+El sistema evita que la IA improvise. Cada feature pasa por Spec, Plan, Implementation Tasks, Build, Audit, Polish y Memory.
 
 ---
 
 ## Flujo principal
 
 ```text
-PRD Approved
-  ↓
-/blueprint [project]
+/setup
   ↓
 /spec [feature]
   ↓
@@ -27,9 +27,11 @@ PRD Approved
   ↓
 @QwikOrchestrator
   ↓
-@QwikArchitect / @QwikDBA
+@QwikArchitect crea Plan técnico + Implementation Tasks
   ↓
-@QwikBuilder
+@QwikDBA si aplica
+  ↓
+@QwikBuilder ejecuta tasks
   ↓
 @QwikAuditor
   ↓
@@ -53,9 +55,6 @@ Estructura esperada:
 AGENTS.md
 docs/
 ├── standards/
-├── templates/
-├── prd/
-├── blueprint/
 ├── specs/
 ├── plans/
 ├── audits/
@@ -70,7 +69,9 @@ Verificación inicial:
 /setup
 ```
 
-`/setup` comprueba estructura, prompts, agentes, standards, templates, `docs/sessions/INDEX.md` y emite un health report con el siguiente paso recomendado.
+`/setup` comprueba estructura, prompts, agentes, standards, `docs/sessions/INDEX.md` y emite un health report con el siguiente paso recomendado.
+
+`docs/standards/` es la constitución técnica del sistema: arquitectura, datos, Qwik, UI, seguridad, testing, workflow y calidad se gobiernan desde ahí.
 
 ---
 
@@ -79,7 +80,6 @@ Verificación inicial:
 | Comando | Uso |
 |---|---|
 | `/setup` | Inicializa o verifica el workspace |
-| `/blueprint [project]` | Convierte un PRD aprobado en módulos, fases y orden de Specs |
 | `/spec [feature]` | Crea una Spec con Acceptance Criteria verificables |
 | `/new-feature [feature]` | Abre el ciclo de construcción desde una Spec Approved |
 | `/bug-fix [bug-id]` | Diagnostica, clasifica, corrige y verifica bugs |
@@ -95,11 +95,10 @@ Verificación inicial:
 | Agente | Responsabilidad |
 |---|---|
 | `@QwikOrchestrator` | Router central, gates, handoffs y contexto mínimo |
-| `@QwikBlueprint` | PRD → Blueprint técnico |
 | `@QwikSpeccer` | Feature → Spec verificable |
-| `@QwikArchitect` | Spec Approved → Plan técnico |
+| `@QwikArchitect` | Spec Approved → Plan técnico + Implementation Tasks |
 | `@QwikDBA` | Datos, schema, queries, constraints, permisos y RLS |
-| `@QwikBuilder` | Plan aprobado → código + Delivery Summary |
+| `@QwikBuilder` | Implementation Tasks del Plan → código + Delivery Summary |
 | `@QwikAuditor` | Verificación con evidencia y veredicto PASSED/FAILED |
 | `@QwikPolisher` | Production readiness tras Audit PASSED |
 | `@QwikBugFix` | Ciclo formal de bugs |
@@ -107,41 +106,35 @@ Verificación inicial:
 
 ---
 
-## Escenario 1 — Proyecto nuevo
+## Escenario 1 — Proyecto nuevo o primera feature
 
-1. Crear o completar PRD:
-
-```text
-docs/prd/[project]-prd.md
-```
-
-2. Ejecutar Blueprint:
+1. Verificar el workspace:
 
 ```text
-/blueprint [project]
+/setup
 ```
 
-3. Aprobar Blueprint.
-
-4. Crear la primera Spec según el orden del Blueprint:
+2. Crear la Spec de la primera feature:
 
 ```text
 /spec [feature]
 ```
 
-5. Aprobar Spec.
+3. Aprobar la Spec.
 
-6. Abrir ciclo de construcción:
+4. Abrir ciclo de construcción:
 
 ```text
 /new-feature [feature]
 ```
 
-7. El sistema enruta:
+5. El sistema enruta:
 
 ```text
 @QwikOrchestrator → @QwikArchitect → @QwikDBA si aplica → @QwikBuilder → @QwikAuditor → @QwikPolisher → @QwikMemory
 ```
+
+El Plan técnico contiene las `Implementation Tasks`; no existe un comando separado para crearlas.
 
 ---
 
@@ -160,6 +153,8 @@ Después:
 ```
 
 `/new-feature` verifica la Spec, consulta INDEX, revisa dependencias, crea o preserva el Plan File y entrega el trabajo al Orchestrator/Architect.
+
+Architect traduce la Spec Approved en Plan técnico e `Implementation Tasks`. Builder ejecuta esas tasks; no inventa scope ni reordena el trabajo por intuición.
 
 ---
 
@@ -245,8 +240,6 @@ En un chat nuevo:
 ## Artefactos del sistema
 
 ```text
-docs/prd/        → PRDs aprobados
-docs/blueprint/  → Blueprints técnicos
 docs/specs/      → Specs formales
 docs/plans/      → Planes técnicos y handoffs
 docs/audits/     → Auditorías
@@ -254,7 +247,6 @@ docs/bugs/       → Bugs y causa raíz
 docs/sessions/   → INDEX y snapshots
 docs/adr/        → Architecture Decision Records
 docs/standards/  → Reglas del sistema
-docs/templates/  → Plantillas
 ```
 
 `docs/sessions/INDEX.md` es estructural y debe poder versionarse.
@@ -264,10 +256,8 @@ docs/templates/  → Plantillas
 ## Gates de calidad
 
 ```text
-Sin PRD Approved → no Blueprint formal.
-Sin Blueprint Approved → no Specs serias en proyecto modular.
 Sin Spec Approved → no código de feature.
-Sin Plan aprobado/listo → Builder no implementa.
+Sin Plan técnico con Implementation Tasks → Builder no implementa.
 Sin datos/RLS resueltos → Builder no implementa si la feature toca datos.
 Sin Delivery Summary verificable → Auditor no puede aprobar.
 Sin Audit PASSED → Polisher no actúa.
@@ -279,7 +269,7 @@ Sin Memory/INDEX actualizado → cierre incompleto.
 ## Reglas de oro
 
 - El Orchestrator enruta; no implementa.
-- Builder implementa el Plan; no decide producto.
+- Builder ejecuta las Implementation Tasks del Plan; no decide producto.
 - DBA gobierna datos y RLS.
 - Auditor verifica con evidencia; no arregla código.
 - Polisher no cambia funcionalidad.

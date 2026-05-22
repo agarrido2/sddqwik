@@ -1,12 +1,11 @@
 ---
-# EXTERNAL_AGENT_PATH: ".github/prompts/new-feature.prompt.md"
+# EXTERNAL_AGENT_PATH: "github/prompts/new-feature.prompt.md"
 name: new-feature
 description: >
-  Inicia el ciclo de construcción de una feature ya especificada. Verifica de
-  forma interna que existe Spec aprobada, que el INDEX está disponible, que las
-  dependencias no bloquean el trabajo y que existe un Plan File seguro antes de
-  entregar el control a @QwikOrchestrator. Si cualquier gate falla, detiene el
-  flujo y recomienda el siguiente paso correcto sin escribir código.
+  Inicia el ciclo de ejecución de una Spec ya aprobada. Verifica INDEX,
+  Spec Approved, estado del Plan técnico, Implementation Tasks y DBA/RLS antes de
+  enrutar hacia @QwikOrchestrator, @QwikArchitect, @QwikDBA o @QwikBuilder.
+  Si cualquier gate falla, detiene el flujo y recomienda el siguiente paso correcto sin escribir código.
 tools: ["edit", "execute/runInTerminal", "read"]
 argument-hint: "example: /new-feature voice-agent-configuration"
 ---
@@ -15,7 +14,7 @@ argument-hint: "example: /new-feature voice-agent-configuration"
 
 ## Propósito
 
-`/new-feature` es la puerta de entrada al ciclo de construcción de una feature.
+`/new-feature` es la puerta de entrada al ciclo de ejecución de una Spec ya aprobada.
 
 No crea la Spec.
 No implementa código.
@@ -25,8 +24,10 @@ No salta gates SDD.
 Su única responsabilidad es preparar una entrada segura para el flujo:
 
 ```text
-Spec Approved → Pre-flight → Plan File → @QwikOrchestrator → @QwikArchitect
+INDEX → Spec Approved → Plan técnico → Implementation Tasks → DBA si aplica → Builder → Auditor → Polisher → Memory
 ```
+
+PRD y Blueprint no forman parte del flujo operativo principal ni son gates para `/new-feature`.
 
 Si la feature no está lista para construcción, `/new-feature` debe detenerse y explicar el siguiente paso correcto.
 
@@ -36,15 +37,17 @@ Si la feature no está lista para construcción, `/new-feature` debe detenerse y
 
 Antes de invocar a `@QwikOrchestrator`, este prompt debe verificar:
 
-1. existe `docs/specs/${input:featureName}.md`;
-2. la Spec está en estado `🟢 Approved` o `Approved`;
-3. existe `docs/sessions/INDEX.md`;
+1. existe `docs/sessions/INDEX.md` como primera fuente operativa;
+2. existe `docs/specs/${input:featureName}.md`;
+3. la Spec está en estado `🟢 Approved` o `Approved`;
 4. no hay dependencias bloqueantes declaradas en el INDEX;
 5. existe o se puede crear `docs/plans/${input:featureName}.md` sin sobrescribir trabajo previo;
-6. el Plan File contiene un `Pre-flight Gate Report`;
-7. el Plan File contiene un `Handoff Log` inicial.
+6. si no hay Plan técnico, el routing debe ir a `@QwikArchitect`;
+7. si el Plan no tiene `Implementation Tasks`, el routing debe ir a `@QwikArchitect`;
+8. si hay datos/RLS pendientes, el routing debe ir a `@QwikDBA`;
+9. `@QwikBuilder` solo puede entrar con Spec Approved, Plan técnico, Implementation Tasks y DBA resuelto o N/A.
 
-Si cualquier gate crítico falla, detener el flujo.
+Si falla INDEX, Spec Approved o dependencias bloqueantes, detener el flujo. Si falta Plan técnico, faltan Implementation Tasks o DBA/RLS está pendiente, registrar el estado y enrutar al agente correcto.
 
 ---
 
@@ -77,45 +80,12 @@ Usa: /new-feature [feature-name]
 
 ---
 
-## Paso 1 — Verificar Spec aprobada
-
-Ejecutar una comprobación acotada sobre la Spec esperada.
-
-```bash
-FEATURE="${input:featureName}"
-SPEC_FILE="docs/specs/${FEATURE}.md"
-
-if [ ! -f "$SPEC_FILE" ]; then
-  echo "NEW-FEATURE GATE BLOQUEADO: no existe $SPEC_FILE"
-  echo "Siguiente paso: ejecutar /spec ${FEATURE}"
-  exit 1
-fi
-
-SPEC_STATUS=$(grep -E '^>?[[:space:]]*Estado:|^>?[[:space:]]*Status:' "$SPEC_FILE" | head -1 || true)
-
-echo "Spec: $SPEC_FILE"
-echo "Estado detectado: ${SPEC_STATUS:-NO ENCONTRADO}"
-
-if ! echo "$SPEC_STATUS" | grep -Eiq '(🟢[[:space:]]*)?Approved|Aprobada|Aprobado'; then
-  echo "NEW-FEATURE GATE BLOQUEADO: la Spec existe pero no está Approved."
-  echo "Siguiente paso: volver a /spec ${FEATURE} y cerrar aprobación antes de construir."
-  exit 1
-fi
-```
-
-### Regla
-
-No continuar si la Spec no está aprobada.
-
-Una Spec en `Draft`, `Review`, `Pending`, `Blocked` o sin estado explícito no habilita construcción.
-
----
-
-## Paso 2 — Verificar INDEX operativo
+## Paso 1 — Verificar INDEX operativo
 
 `docs/sessions/INDEX.md` es la primera fuente de verdad operativa para routing, dependencias y carga selectiva.
 
 ```bash
+FEATURE="${input:featureName}"
 INDEX_FILE="docs/sessions/INDEX.md"
 
 if [ ! -f "$INDEX_FILE" ]; then
@@ -131,6 +101,39 @@ echo "INDEX operativo: $INDEX_FILE"
 
 No sustituir el INDEX leyendo specs y plans a ciegas.
 Si el INDEX falta, el siguiente paso correcto es `/setup`.
+
+---
+
+## Paso 2 — Verificar Spec aprobada
+
+Ejecutar una comprobación acotada sobre la Spec esperada. Este es el primer gate de construcción.
+
+```bash
+SPEC_FILE="docs/specs/${FEATURE}.md"
+
+if [ ! -f "$SPEC_FILE" ]; then
+  echo "NEW-FEATURE GATE BLOQUEADO: no existe $SPEC_FILE"
+  echo "Siguiente paso: ejecutar /spec ${FEATURE}"
+  exit 1
+fi
+
+SPEC_STATUS=$(grep -E '^>?[[:space:]]*Estado:|^>?[[:space:]]*Status:' "$SPEC_FILE" | head -1 || true)
+
+echo "Spec: $SPEC_FILE"
+echo "Estado detectado: ${SPEC_STATUS:-NO ENCONTRADO}"
+
+if ! echo "$SPEC_STATUS" | grep -Eiq '(🟢[[:space:]]*)?Approved|Aprobada|Aprobado'; then
+  echo "NEW-FEATURE GATE BLOQUEADO: la Spec existe pero no está Approved."
+  echo "Siguiente paso: volver a @QwikSpeccer con /spec ${FEATURE} o aprobar explícitamente la Spec antes de construir."
+  exit 1
+fi
+```
+
+### Regla
+
+No continuar si la Spec no está aprobada.
+
+Una Spec en `Draft`, `Review`, `Pending`, `Blocked` o sin estado explícito no habilita construcción.
 
 ---
 
@@ -177,7 +180,7 @@ Si no hay dependencias bloqueantes, continuar.
 
 ## Paso 5 — Crear o preservar Plan File
 
-El Plan File es el artefacto de coordinación del ciclo.
+El Plan File es el artefacto de coordinación del ciclo. `/new-feature` puede crear un contenedor operativo inicial, pero no crea el Plan técnico ni las Implementation Tasks; eso corresponde a `@QwikArchitect`.
 
 Ruta esperada:
 
@@ -215,6 +218,9 @@ if [ ! -f "$PLAN_FILE" ]; then
 | INDEX existe | ✅ PASS | docs/sessions/INDEX.md | N/A |
 | Dependencias | ⚠️ REVIEWED | Revisar entrada INDEX relacionada | Documentar en fase Architect |
 | Plan File | ✅ CREATED | docs/plans/${FEATURE}.md | N/A |
+| Plan técnico | ⏳ PENDING | Pendiente de @QwikArchitect | Enrutar a @QwikArchitect |
+| Implementation Tasks | ⏳ PENDING | Pendiente de @QwikArchitect | Enrutar a @QwikArchitect |
+| Datos/RLS | ⏳ REVIEW | Pendiente de clasificación | Enrutar a @QwikDBA si aplica |
 
 ## 2. Contexto mínimo inicial
 
@@ -236,9 +242,9 @@ Pendiente de completar por @QwikArchitect.
 - Contexto: docs/specs/${FEATURE}.md, docs/sessions/INDEX.md, docs/plans/${FEATURE}.md
 - Tarea: iniciar routing controlado para construcción de feature con Spec aprobada.
 - Scope: preparar handoff hacia @QwikArchitect.
-- No tocar: código de aplicación, schema, migraciones, RLS o UI antes del Plan técnico.
+- No tocar: código de aplicación, schema, migraciones, RLS o UI antes del Plan técnico y las Implementation Tasks.
 - Condición de salida: routing decision registrado y handoff a @QwikArchitect si procede.
-- Riesgos conocidos: validar dependencias y reutilización de tablas/servicios desde INDEX.
+- Riesgos conocidos: validar dependencias y datos/RLS desde INDEX y Spec.
 
 ## 6. Routing Decision
 
@@ -252,15 +258,33 @@ Pendiente de @QwikArchitect.
 
 Pendiente si aplica.
 
-## 9. Builder Delivery Summary
+## 9. Implementation Tasks
+
+Pendiente de @QwikArchitect.
+
+## 10. DBA Gate
+
+Estado: N/A / READY_FOR_DBA / RESOLVED / BLOCKED
+
+Pendiente de clasificación por @QwikArchitect o @QwikDBA.
+
+## 11. Builder Delivery Summary
 
 Pendiente de @QwikBuilder.
 
-## 10. Audit Cycles
+## 12. Audit Cycles
 
 Pendiente de @QwikAuditor.
 
-## 11. Final Status
+## 13. Polish Notes
+
+Pendiente de @QwikPolisher.
+
+## 14. Memory Notes
+
+Pendiente de @QwikMemory.
+
+## 15. Final Status
 
 Pendiente.
 EOF
@@ -291,14 +315,14 @@ Añadir un nuevo handoff log, no borrar contenido anterior.
 
 ---
 
-## Paso 6 — Verificar Plan File operable
+## Paso 6 — Verificar Plan técnico, Implementation Tasks y DBA/RLS
 
-Antes de invocar al Orchestrator, confirmar que el Plan File contiene las secciones mínimas.
+Antes de invocar al Orchestrator, confirmar que el Plan File contiene las secciones mínimas para enrutar correctamente. Esta verificación no habilita Builder por sí sola; solo determina el siguiente handoff correcto.
 
 ```bash
 missing_plan_sections=0
 
-for section in "Pre-flight Gate Report" "Handoff Log" "Routing Decision" "Technical Plan" "Builder Delivery Summary" "Audit Cycles"; do
+for section in "Pre-flight Gate Report" "Handoff Log" "Routing Decision" "Technical Plan" "Implementation Tasks" "DBA Gate" "Builder Delivery Summary" "Audit Cycles" "Polish Notes" "Memory Notes"; do
   if grep -q "$section" "$PLAN_FILE"; then
     echo "OK sección Plan: $section"
   else
@@ -311,6 +335,26 @@ if [ "$missing_plan_sections" -gt 0 ]; then
   echo "NEW-FEATURE GATE ADVERTENCIA: el Plan File existe pero le faltan secciones operativas."
   echo "@QwikOrchestrator debe normalizarlo antes de handoff a @QwikArchitect."
 fi
+```
+
+### Routing según estado del Plan
+
+```text
+Si no existe Plan técnico → @QwikArchitect.
+Si el Plan técnico está vacío, pendiente o incompleto → @QwikArchitect.
+Si no existen Implementation Tasks → @QwikArchitect.
+Si las Implementation Tasks están vacías, pendientes o no son ejecutables → @QwikArchitect.
+Si datos/RLS está en READY_FOR_DBA, pendiente DBA o BLOCKED → @QwikDBA.
+Si datos/RLS es RESOLVED o N/A, y existen Spec Approved + Plan técnico + Implementation Tasks → @QwikBuilder.
+```
+
+`@QwikBuilder` solo puede entrar si todos estos gates están satisfechos:
+
+```text
+Spec Approved
+Plan técnico existe
+Implementation Tasks existen
+DBA/RLS resuelto o N/A
 ```
 
 ---
@@ -335,10 +379,12 @@ Tarea:
 1. Leer primero docs/sessions/INDEX.md.
 2. Leer la Spec aprobada.
 3. Leer el Plan File creado o existente.
-4. Confirmar si hay dependencias, tablas DB o servicios relacionados en INDEX.
+4. Confirmar si hay dependencias, datos/RLS o servicios relacionados en INDEX.
 5. Registrar Routing Decision en el Plan File.
 6. Enrutar hacia @QwikArchitect si el Plan técnico aún no existe.
-7. No invocar a @QwikBuilder hasta que exista Plan técnico ejecutable.
+7. Enrutar hacia @QwikArchitect si faltan Implementation Tasks ejecutables.
+8. Enrutar hacia @QwikDBA si datos/RLS está pendiente, READY_FOR_DBA o BLOCKED.
+9. Enrutar hacia @QwikBuilder solo si existe Spec Approved, Plan técnico, Implementation Tasks y DBA/RLS resuelto o N/A.
 
 Restricciones:
 - No escribir código.
@@ -346,6 +392,12 @@ Restricciones:
 - No leer specs o plans no relacionados salvo dependencia confirmada en INDEX.
 - No saltar a Builder.
 - No ampliar scope funcional fuera de la Spec aprobada.
+
+Builder gate obligatorio:
+
+```text
+Spec Approved + Plan técnico + Implementation Tasks + DBA/RLS resuelto o N/A
+```
 
 Flujo esperado:
 @QwikArchitect → @QwikDBA si aplica → @QwikBuilder → @QwikAuditor → @QwikPolisher → @QwikMemory
@@ -358,16 +410,23 @@ Flujo esperado:
 ```text
 NEW-FEATURE PREFLIGHT — ${input:featureName}
 
+INDEX: PASS / FAIL
 Spec: PASS / FAIL
 Spec status: Approved / no aprobado / no encontrado
-INDEX: PASS / FAIL
 Dependencias: OK / BLOQUEADAS / REVIEW REQUIRED
 Plan File: CREATED / EXISTS / BLOCKED
 Plan sections: OK / NEEDS NORMALIZATION
-Estado: READY FOR ORCHESTRATOR / BLOCKED
+Plan técnico: EXISTS / MISSING / PENDING
+Implementation Tasks: EXISTS / MISSING / PENDING
+DBA/RLS: N/A / RESOLVED / READY_FOR_DBA / BLOCKED
+Builder gate: READY / BLOCKED
+Estado: READY FOR ORCHESTRATOR / READY FOR ARCHITECT / READY FOR DBA / READY FOR BUILDER / BLOCKED
 
 Siguiente paso:
 - @QwikOrchestrator
+- @QwikArchitect
+- @QwikDBA
+- @QwikBuilder
 - /spec ${input:featureName}
 - /setup
 - resolver dependencias bloqueantes

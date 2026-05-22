@@ -1,10 +1,11 @@
 ---
-# EXTERNAL_AGENT_PATH: ".github/prompts/spec.prompt.md"
+# EXTERNAL_AGENT_PATH: "github/prompts/spec.prompt.md"
 name: spec
 description: >
-  Crea o revisa una Spec formal antes de construir una feature. Obliga a discovery
-  mínimo, alineación con Blueprint/INDEX, Acceptance Criteria binarios, Scope OUT,
-  contratos de datos serializables, riesgos, dependencias y aprobación explícita.
+  Entrada principal del flujo spec-first. Crea o revisa una Spec formal antes de
+  construir una feature desde input del usuario, INDEX/snapshot, bug o legacy si aplica.
+  Obliga a discovery mínimo, Acceptance Criteria binarios, Scope OUT, riesgos,
+  decisiones abiertas y aprobación explícita.
   Sin Spec Approved, /new-feature no puede ejecutarse.
 tools: ["edit", "execute/runInTerminal", "read"]
 argument-hint: "example: /spec mieleshuelva-configuration"
@@ -14,25 +15,27 @@ argument-hint: "example: /spec mieleshuelva-configuration"
 
 ## Propósito
 
-`/spec` crea el contrato funcional verificable que gobierna todo el ciclo SDD.
+`/spec` es la entrada principal para definir trabajo en el sistema spec-first. Crea el primer artefacto contractual verificable que gobierna todo el ciclo SDD.
 
 No implementa código.
 No crea Plan técnico.
 No decide arquitectura final.
 No aprueba por cuenta propia.
-No sustituye a Blueprint cuando el alcance lo requiere.
+No diseña implementación prematura.
 
 Su objetivo es convertir una intención funcional en una Spec auditable:
 
 ```text
-Idea / módulo → Discovery mínimo → Scope → Acceptance Criteria → Contratos → Riesgos → Review → Approved
+Input usuario / INDEX / snapshot / bug / legacy → Discovery mínimo → Scope → Acceptance Criteria → Riesgos → Review → Approved
 ```
+
+PRD y Blueprint no forman parte del flujo operativo principal. La Spec debe poder crearse sin depender de ellos.
 
 ---
 
 ## Regla operativa crítica
 
-Una Spec solo habilita `/new-feature` si contiene:
+Una Spec debe quedar inicialmente en `🟡 Review`. Solo habilita `/new-feature` si contiene:
 
 1. estado explícito `🟢 Approved` o `Approved` tras aprobación del usuario;
 2. propósito funcional claro;
@@ -41,13 +44,14 @@ Una Spec solo habilita `/new-feature` si contiene:
 5. Scope OUT;
 6. Acceptance Criteria funcionales binarios;
 7. Acceptance Criteria no funcionales;
-8. contratos de datos serializables si aplica;
+8. datos funcionales relevantes si aplica, sin diseñar schema;
 9. dependencias y relaciones;
 10. riesgos y restricciones;
-11. notas de datos/RLS si aplica;
-12. criterios de auditoría verificables.
+11. decisiones abiertas, marcando cuáles bloquean aprobación;
+12. notas de datos/RLS si aplica, sin resolverlas técnicamente;
+13. criterios de auditoría verificables.
 
-Si cualquiera de estas piezas falta, la Spec debe quedar en `Draft` o `Review`, no `Approved`.
+Si cualquiera de estas piezas falta, la Spec debe quedar en `🟡 Review`, no `Approved`.
 
 ---
 
@@ -58,6 +62,7 @@ Durante `/spec`, no hacer:
 - escribir código en `src/`;
 - crear migraciones;
 - diseñar schema definitivo sin DBA;
+- definir rutas, componentes, servicios o capas de implementación;
 - aprobar la Spec sin confirmación del usuario;
 - leer todas las specs;
 - leer todos los plans;
@@ -112,17 +117,16 @@ Permitido:
 
 ```text
 docs/sessions/INDEX.md si existe
-docs/blueprint/*.md solo para localizar el módulo/fase relacionada, sin leer todos si no hace falta
-docs/templates/PRD-TEMPLATE.md solo como referencia si no hay PRD claro
-docs/templates/BLUEPRINT-TEMPLATE.md solo como referencia si no hay Blueprint claro
+snapshot de sesión si INDEX lo referencia
+bug report si el flujo viene de /bug-fix
+legacy audit si el flujo viene de /legacy-audit
+Spec existente de la misma feature si ya existe
+input directo del usuario
 ```
 
 Comprobación inicial:
 
 ```bash
-echo "Blueprints disponibles, máximo 3:"
-ls docs/blueprint/*.md 2>/dev/null | head -3 || echo "No hay blueprints detectados"
-
 echo "Entradas relacionadas en INDEX:"
 grep -Ei "(^\|[[:space:]]*${FEATURE}[[:space:]]*\|)|${FEATURE}" docs/sessions/INDEX.md 2>/dev/null || echo "No hay entradas relacionadas en INDEX"
 ```
@@ -130,7 +134,7 @@ grep -Ei "(^\|[[:space:]]*${FEATURE}[[:space:]]*\|)|${FEATURE}" docs/sessions/IN
 ### Regla
 
 No usar `ls docs/specs/` para inspeccionar todas las specs.
-Solo leer specs relacionadas si INDEX, Blueprint o el usuario las referencia explícitamente.
+Solo leer specs relacionadas si INDEX, snapshot, bug, legacy o el usuario las referencia explícitamente.
 
 ---
 
@@ -173,7 +177,9 @@ Contexto mínimo:
 - Feature: `${input:featureName}`
 - Spec esperada: docs/specs/${input:featureName}.md
 - INDEX: docs/sessions/INDEX.md si existe
-- Blueprint relacionado: solo si INDEX/usuario lo identifica
+- Snapshot: solo si INDEX lo referencia
+- Bug report o legacy audit: solo si el flujo lo indica
+- Input directo del usuario: usarlo como fuente principal cuando exista
 
 Tarea:
 1. Determinar si es nueva Spec o revisión de Spec existente.
@@ -182,15 +188,17 @@ Tarea:
 4. Definir Scope IN y Scope OUT.
 5. Escribir Acceptance Criteria funcionales binarios.
 6. Escribir Acceptance Criteria no funcionales verificables.
-7. Definir contratos de datos serializables si aplica.
-8. Señalar datos/RLS/permisos si aplica, sin diseñarlos en detalle.
-9. Identificar dependencias, riesgos y supuestos.
-10. Dejar la Spec en `🟡 Review` hasta aprobación explícita del usuario.
-11. Solo tras aprobación explícita, cambiar a `🟢 Approved`.
+7. Identificar datos funcionales relevantes si aplica, sin diseñar schema.
+8. Señalar datos/RLS/permisos si aplica, sin resolverlos técnicamente.
+9. Identificar dependencias, riesgos, supuestos y decisiones abiertas.
+10. Marcar explícitamente cualquier decisión abierta bloqueante.
+11. Dejar la Spec en `🟡 Review` hasta aprobación explícita del usuario.
+12. Solo tras aprobación explícita, cambiar a `🟢 Approved`.
 
 Restricciones:
 - No escribir código.
 - No crear Plan técnico.
+- No definir schema, rutas, migraciones, componentes ni servicios.
 - No aprobar sin el usuario.
 - No mezclar múltiples features independientes.
 - No resolver dudas inventando alcance.
@@ -208,8 +216,8 @@ Crear `docs/specs/${input:featureName}.md` con esta estructura mínima:
 > Estado: 🟡 Review
 > Fecha: [YYYY-MM-DD]
 > Owner funcional: [usuario/rol]
-> Fuente: [PRD / Blueprint / usuario / legacy / bug / otro]
-> Blueprint relacionado: [ruta o N/A]
+> Contexto de entrada: [usuario / INDEX / snapshot / bug / legacy / otro]
+> Artefacto: docs/specs/${input:featureName}.md
 
 ## 1. Propósito
 
@@ -246,31 +254,22 @@ Crear `docs/specs/${input:featureName}.md` con esta estructura mínima:
 | AC-NF-002 | Performance |  |  |
 | AC-NF-003 | A11Y/UX |  |  |
 
-## 7. Contratos de datos
+## 7. Datos funcionales y serialización
 
-### Entrada
+- Datos de entrada relevantes: [N/A o descripción funcional]
+- Datos de salida relevantes: [N/A o descripción funcional]
+- Datos que cruzan frontera serializable: [N/A o lista funcional]
+- Datos que NO deben cruzar frontera: [N/A o lista funcional]
+- Pendiente DBA: [sí/no y motivo]
 
-```ts
-// DTO serializable o N/A
-```
-
-### Salida
-
-```ts
-// DTO serializable o N/A
-```
-
-### Reglas de serialización
-
-- [qué datos pueden cruzar frontera]
-- [qué no puede cruzar frontera]
+No definir schema, migraciones ni modelos técnicos en la Spec.
 
 ## 8. Datos, permisos y RLS
 
-- Tablas afectadas: [N/A o lista]
-- Nuevas tablas: [N/A o propuesta pendiente de DBA]
-- RLS requerida: [sí/no/pendiente DBA]
-- Roles/permisos: [N/A o lista]
+- Necesidad de datos: [N/A / lectura / escritura / pendiente DBA]
+- Permisos funcionales: [N/A o roles afectados]
+- RLS: [N/A / pendiente DBA]
+- Restricciones de privacidad/seguridad: [N/A o descripción]
 
 ## 9. Dependencias y relaciones
 
@@ -291,15 +290,15 @@ Crear `docs/specs/${input:featureName}.md` con esta estructura mínima:
 
 - Riesgos:
 - Supuestos:
-- Decisiones abiertas:
+- Decisiones abiertas no bloqueantes:
+- Decisiones abiertas bloqueantes para aprobación:
 
-## 12. Impacto estimado
+## 12. Alcance funcional impactado
 
-- Rutas:
-- Componentes:
-- Servicios:
-- Datos:
-- Tests:
+- Pantallas o flujos de usuario afectados:
+- Roles o permisos afectados:
+- Estados visibles afectados:
+- Evidencia esperada para auditoría:
 
 ## 13. Criterios de auditoría
 
@@ -308,7 +307,7 @@ El Auditor deberá verificar:
 - [AC funcionales]
 - [AC no funcionales]
 - [Scope OUT respetado]
-- [contratos serializables]
+- [datos funcionales serializables si aplica]
 - [tests si aplica]
 
 ## 14. Historial de aprobación
@@ -326,8 +325,8 @@ Los AC deben ser binarios.
 Buenos ejemplos:
 
 ```text
-AC-001: Si un usuario sin rol admin accede a /app/users, debe recibir redirect a /app sin renderizar contenido protegido.
-Verificación: test/e2e o revisión de routeLoader guard.
+AC-001: Si un usuario sin permiso de administración intenta abrir una función restringida, el sistema debe impedir el acceso y mostrar una respuesta autorizada por producto.
+Verificación: prueba funcional o revisión contra criterio de acceso esperado.
 ```
 
 Malos ejemplos:
@@ -411,7 +410,7 @@ Regla:
 Formato recomendado:
 
 ```md
-| ${input:featureName} | [módulo] | 🟡 Spec Review / 🟢 Spec Approved | [dependencias] | [tablas/N/A] | [expone/N/A] | Spec | [resumen breve] | [YYYY-MM-DD] |
+| ${input:featureName} | [módulo] | 🟡 Spec Review / 🟢 Spec Approved | [dependencias] | [datos/N/A] | [expone/N/A] | Spec | [resumen breve] | [YYYY-MM-DD] |
 ```
 
 ---
@@ -422,14 +421,14 @@ Formato recomendado:
 SPEC REPORT — ${input:featureName}
 
 Spec file: docs/specs/${input:featureName}.md
-Estado: Review / Approved
-Blueprint relacionado: [ruta/N/A]
+Estado inicial: 🟡 Review
 Scope IN: [resumen]
 Scope OUT: [resumen]
 AC funcionales: N
 AC no funcionales: N
 Datos/RLS: N/A / pendiente DBA / aplica
 Riesgos abiertos: N
+Decisiones abiertas bloqueantes: N
 Tamaño: OK / DIVIDIR
 INDEX actualizado: sí / no
 

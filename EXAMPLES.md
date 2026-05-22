@@ -5,31 +5,64 @@ Ejemplos prácticos para usar SDD Qwik sin saltarse gates.
 Regla base:
 
 ```text
-/spec define el contrato.
-/new-feature abre el ciclo de construcción.
-Builder no implementa sin Plan.
+Sin Spec Approved, no hay implementación.
+/setup verifica el workspace.
+/spec define el contrato funcional.
+/new-feature abre el ciclo de construcción desde una Spec Approved.
+Implementation Tasks viven dentro del Plan técnico.
+Builder ejecuta las Implementation Tasks del Plan.
 Auditor no aprueba sin evidencia.
 ```
 
 ---
 
-## 1. Proyecto nuevo
+## 1. Proyecto nuevo o primera feature
 
-### Generar Blueprint desde PRD aprobado
+### Verificar workspace
 
 ```text
-/blueprint mieleshuelva
-
-El PRD está en docs/prd/mieleshuelva-prd.md y está aprobado.
-Necesito Blueprint con módulos, fases, dependencias y orden recomendado de Specs.
+/setup
 ```
 
-### Ajustar Blueprint tras revisión
+Resultado esperado:
 
 ```text
-@QwikBlueprint Revisa docs/blueprint/mieleshuelva-blueprint.md.
-Quiero mover el módulo campañas de Fase 1 a Fase 2 porque no es MVP.
-Actualiza fases, dependencias y orden de Specs.
+- verifica estructura operativa
+- verifica prompts, agentes y standards
+- verifica docs/sessions/INDEX.md
+- recomienda /spec [feature] como siguiente paso si no hay feature activa
+```
+
+### Crear primera Spec
+
+```text
+/spec agent-configuration
+
+Necesito una pantalla para configurar el agente de voz:
+- nombre
+- idioma
+- voz seleccionada
+- prompt de sistema
+
+Solo owner y admin pueden acceder.
+```
+
+### Abrir construcción tras aprobación
+
+```text
+/new-feature agent-configuration
+```
+
+Resultado esperado:
+
+```text
+@QwikOrchestrator
+→ @QwikArchitect crea Plan técnico + Implementation Tasks
+→ @QwikDBA si aplica
+→ @QwikBuilder ejecuta tasks
+→ @QwikAuditor
+→ @QwikPolisher
+→ @QwikMemory
 ```
 
 ---
@@ -96,6 +129,7 @@ Resultado esperado:
 - consulta docs/sessions/INDEX.md
 - revisa dependencias
 - crea o preserva docs/plans/agent-configuration.md
+- pide a @QwikArchitect Plan técnico + Implementation Tasks si no existe
 - deja Pre-flight Gate Report
 - entrega a @QwikOrchestrator / @QwikArchitect
 ```
@@ -108,7 +142,15 @@ Resultado esperado:
 
 ```text
 @QwikArchitect Lee docs/specs/agent-configuration.md.
-Crea docs/plans/agent-configuration.md con archivos esperados, fronteras $(), datos, tests, riesgos y handoff a Builder.
+Crea docs/plans/agent-configuration.md con archivos esperados, fronteras $(), datos, tests, riesgos, handoff a Builder y sección ## Implementation Tasks.
+Cada task debe incluir ID, tipo, descripción, dependencias y evidencia esperada.
+```
+
+### Revisar tasks antes de Build
+
+```text
+@QwikOrchestrator Revisa docs/plans/agent-configuration.md.
+Confirma si el Plan está READY_FOR_BUILD y si las Implementation Tasks son ejecutables por Builder.
 ```
 
 ### Duda arquitectónica puntual
@@ -143,12 +185,14 @@ Genera la propuesta de migración y policies si aplica.
 
 ## 6. Implementación
 
-### Build desde Plan aprobado
+### Build desde Implementation Tasks
 
 ```text
 @QwikBuilder Lee docs/specs/agent-configuration.md y docs/plans/agent-configuration.md.
 Ejecuta pre-flight antes de editar.
-Implementa solo el scope aprobado y deja Delivery Summary con matriz AC → implementación → evidencia.
+Ejecuta las Implementation Tasks del Plan en orden de dependencias.
+No inventes scope ni reordenes tasks sin indicación del Plan/Architect.
+Deja Delivery Summary con matriz Task → implementación → evidencia y AC → cobertura.
 ```
 
 ### Build con TDD
@@ -157,6 +201,7 @@ Implementa solo el scope aprobado y deja Delivery Summary con matriz AC → impl
 @QwikBuilder Lee docs/plans/call-quota-enforcement.md.
 Implementa primero tests para el servicio de cuotas según TESTING-POLICY.md.
 No toques UI hasta cubrir la lógica de negocio.
+Sigue las Implementation Tasks del Plan.
 ```
 
 ### Corrección tras audit FAILED
@@ -165,7 +210,7 @@ No toques UI hasta cubrir la lógica de negocio.
 @QwikBuilder Lee docs/audits/agent-configuration-audit.md.
 Corrige solo los issues críticos y mayores listados.
 No amplíes scope.
-Actualiza la matriz AC → implementación → evidencia.
+Actualiza la matriz Task → implementación → evidencia y AC → cobertura.
 ```
 
 ---
@@ -176,7 +221,7 @@ Actualiza la matriz AC → implementación → evidencia.
 
 ```text
 @QwikAuditor Audita agent-configuration.
-Lee Spec, Plan, Delivery Summary y código declarado por Builder.
+Lee Spec, Plan, Implementation Tasks, Delivery Summary y código declarado por Builder.
 No emitas PASSED sin matriz AC completa y evidencia verificable.
 ```
 
@@ -329,15 +374,17 @@ Dime qué gate está abierto, qué artefactos debo leer y qué agente debe actua
 ### Proyecto nuevo completo
 
 ```text
-1. Completar docs/prd/[project]-prd.md
-2. Aprobar PRD
-3. /blueprint [project]
-4. Aprobar Blueprint
-5. /spec [first-feature]
-6. Aprobar Spec
-7. /new-feature [first-feature]
-8. Architect/DBA → Builder → Auditor → Polisher → Memory
-9. Repetir desde /spec para la siguiente feature del Blueprint
+1. /setup
+2. /spec first-feature
+3. Aprobar Spec
+4. /new-feature first-feature
+5. @QwikArchitect crea Plan técnico + Implementation Tasks
+6. @QwikDBA resuelve datos/RLS si aplica
+7. @QwikBuilder ejecuta las Implementation Tasks
+8. @QwikAuditor verifica Spec + Plan + Tasks + Delivery Summary
+9. @QwikPolisher cierra production readiness tras Audit PASSED
+10. @QwikMemory actualiza INDEX/snapshot y Prompt de Reanudación
+11. Repetir desde /spec para la siguiente feature
 ```
 
 ### Feature con datos y permisos
@@ -346,10 +393,10 @@ Dime qué gate está abierto, qué artefactos debo leer y qué agente debe actua
 1. /spec team-member-management
 2. Aprobar Spec
 3. /new-feature team-member-management
-4. @QwikArchitect crea Plan
+4. @QwikArchitect crea Plan técnico + Implementation Tasks
 5. @QwikDBA resuelve datos/RLS
-6. @QwikBuilder implementa con Delivery Summary
-7. @QwikAuditor valida AC, RBAC, RLS y tests
+6. @QwikBuilder ejecuta las Implementation Tasks con Delivery Summary
+7. @QwikAuditor valida AC, Tasks, RBAC, RLS y tests
 8. @QwikPolisher cierra production readiness
 9. @QwikMemory actualiza INDEX/snapshot
 ```
@@ -360,7 +407,7 @@ Dime qué gate está abierto, qué artefactos debo leer y qué agente debe actua
 1. /bug-fix billing-access-leak
 2. QwikBugFix diagnostica causa raíz
 3. Si el problema es de diseño, escala a @QwikArchitect
-4. Architect ajusta Plan o pide revisar Spec
+4. Architect ajusta Plan/Implementation Tasks o pide revisar Spec
 5. Builder implementa fix acotado
 6. Auditor verifica bug y regresiones
 ```

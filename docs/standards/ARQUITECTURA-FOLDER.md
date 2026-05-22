@@ -1221,14 +1221,19 @@ Para evitar la duplicación de lógica, los agentes deben seguir este flujo de d
 Esta sección define la estructura canónica de `docs/` y el propósito de cada
 directorio. Los agentes necesitan este mapa para saber dónde leer y dónde escribir.
 
+Flujo documental operativo:
+
+```text
+Spec → Plan → Implementation Tasks → Build → Audit → Polish → Memory
+```
+
+La Spec es el primer contrato de trabajo. Las `Implementation Tasks` viven dentro
+de `docs/plans/[feature].md`; no existe una carpeta obligatoria separada para ellas.
+
 ```
 docs/
-├── prd/            → PRDs aprobados por el cliente — @QwikBlueprint lee aquí
-├── blueprint/      → Blueprints técnicos aprobados — @QwikBlueprint escribe aquí
-├── templates/      → Plantillas PRD y Blueprint — NO modificar
-│
-├── specs/          → Specs formales — @QwikSpeccer escribe, todos leen
-├── plans/          → Plan Files + Handoff Logs — @QwikArchitect escribe
+├── specs/          → Primer contrato de trabajo — @QwikSpeccer escribe, todos leen
+├── plans/          → Plan técnico + Implementation Tasks — @QwikArchitect escribe
 ├── audits/         → Reportes de auditoría — @QwikAuditor escribe
 ├── bugs/           → Trazabilidad de bugs — /bug-fix escribe
 ├── adr/            → Architecture Decision Records — @QwikMemory escribe
@@ -1237,23 +1242,30 @@ docs/
 │   ├── INDEX.md    ← MEMORIA COLECTIVA — primera lectura de @QwikOrchestrator
 │   └── archive/    ← Snapshots históricos de sesiones completadas
 │
-└── standards/      → Reglas del proyecto — NO modificar en desarrollo
+└── standards/      → Constitución técnica del sistema — NO modificar en desarrollo
 ```
 
 ### Reglas de escritura por agente
 
 | Directorio | Owner (escribe) | Quién lee |
 |---|---|---|
-| `docs/prd/` | Desarrollador (humano) | @QwikBlueprint |
-| `docs/blueprint/` | @QwikBlueprint | @QwikOrchestrator, @QwikSpeccer |
 | `docs/specs/` | @QwikSpeccer | Todos los agentes |
 | `docs/plans/` | @QwikArchitect | @QwikBuilder, @QwikAuditor, @QwikOrchestrator |
 | `docs/audits/` | @QwikAuditor | @QwikOrchestrator, @QwikPolisher |
-| `docs/bugs/` | @QwikAuditor (diagnóstico) | @QwikOrchestrator |
+| `docs/bugs/` | @QwikBugFix | @QwikOrchestrator, @QwikAuditor |
 | `docs/adr/` | @QwikMemory | Todos |
 | `docs/sessions/INDEX.md` | @QwikMemory | **@QwikOrchestrator (siempre primero)** |
 | `docs/sessions/archive/` | @QwikMemory | Solo bajo demanda explícita |
 | `docs/standards/` | Mantenimiento manual | Todos los agentes (solo lectura) |
+
+Reglas:
+
+```text
+docs/specs/ es el primer contrato verificable de cada feature.
+docs/plans/ contiene Plan técnico, handoffs e Implementation Tasks.
+Builder ejecuta las Implementation Tasks; no las busca en otra carpeta.
+docs/standards/ gobierna arquitectura, datos, seguridad, testing, UI y calidad.
+```
 
 ### `docs/sessions/INDEX.md` — La Memoria Colectiva
 
