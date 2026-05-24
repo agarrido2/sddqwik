@@ -1,5 +1,5 @@
 ---
-# EXTERNAL_AGENT_PATH: "github/agents/qwik-builder.agent.md"
+# EXTERNAL_AGENT_PATH: ".github/agents/qwik-builder.agent.md"
 name: QwikBuilder
 description: >
   Ingeniero Staff de Implementación del sistema SDD Qwik. Ejecuta Implementation

@@ -1,5 +1,5 @@
 ---
-# EXTERNAL_AGENT_PATH: "github/agents/qwik-architect.agent.md"
+# EXTERNAL_AGENT_PATH: ".github/agents/qwik-architect.agent.md"
 name: QwikArchitect
 description: >
   Autoridad de planificación técnica del sistema SDD Qwik. Convierte una Spec

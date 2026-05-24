@@ -1,5 +1,5 @@
 ---
-# EXTERNAL_AGENT_PATH: "github/agents/qwik-memory.agent.md"
+# EXTERNAL_AGENT_PATH: ".github/agents/qwik-memory.agent.md"
 name: QwikMemory
 description: >
   Gestor de memoria operativa de SDD Qwik. Mantiene `docs/sessions/INDEX.md`,

@@ -1,5 +1,5 @@
 ---
-# EXTERNAL_AGENT_PATH: "github/prompts/spec.prompt.md"
+# EXTERNAL_AGENT_PATH: ".github/prompts/spec.prompt.md"
 name: spec
 description: >
   Entrada principal del flujo spec-first. Crea o revisa una Spec formal antes de

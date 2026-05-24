@@ -1,5 +1,5 @@
 ---
-# EXTERNAL_AGENT_PATH: "github/prompts/new-feature.prompt.md"
+# EXTERNAL_AGENT_PATH: ".github/prompts/new-feature.prompt.md"
 name: new-feature
 description: >
   Inicia el ciclo de ejecución de una Spec ya aprobada. Verifica INDEX,

@@ -1,5 +1,5 @@
 ---
-# EXTERNAL_AGENT_PATH: "github/agents/qwik-speccer.agent.md"
+# EXTERNAL_AGENT_PATH: ".github/agents/qwik-speccer.agent.md"
 name: QwikSpeccer
 description: >
   Autoridad principal de entrada spec-first de SDD Qwik. Crea o revisa Specs desde

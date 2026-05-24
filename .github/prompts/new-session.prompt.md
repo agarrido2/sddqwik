@@ -1,5 +1,5 @@
 ---
-# EXTERNAL_AGENT_PATH: "github/prompts/new-session.prompt.md"
+# EXTERNAL_AGENT_PATH: ".github/prompts/new-session.prompt.md"
 name: new-session
 description: >
   Reanuda un chat nuevo desde docs/sessions/INDEX.md, usando como guía un

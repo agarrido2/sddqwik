@@ -1,5 +1,5 @@
 ---
-# EXTERNAL_AGENT_PATH: "github/prompts/setup.prompt.md"
+# EXTERNAL_AGENT_PATH: ".github/prompts/setup.prompt.md"
 name: setup
 description: >
   Inicializa o verifica el workspace SDD Qwik para flujo spec-first. Comprueba estructura operativa,
